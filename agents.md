@@ -19,8 +19,11 @@ scanner, a forklift tablet or a low-cost handset - and does exactly this:
 - Grant camera, microphone and location only when `config.json` enables them in `native`, and deny
   anything else before Android is asked (`[NATIVE][DENIED]`). Permissions are declared at build time
   from the same block, so an APK never carries one its config cannot use.
-- Do nothing else: no camera barcode decoding (the scan engine owns that), no database, no sync, no
-  MDM, no second window, no updater, no telemetry, no IPC surface.
+- The scan engine owns barcode reading on a handheld. On a device without one, `native.cameraScanner`
+  adds a camera reader that delivers through the same `BarcodeReceiver.dispatch` call, so the page sees
+  one path, not two. Verify it with `BarcodeDecoderTest` and the emulator recipe in `history.md`.
+- Do nothing else: no database, no sync, no MDM, no second window, no updater, no telemetry, no IPC
+  surface.
 
 The brief has been absorbed into this contract, `src-tauri/src/config.rs` and `history.md`. If code
 and this contract disagree, fix the code or record the decision in `history.md`.
@@ -38,7 +41,10 @@ and this contract disagree, fix the code or record the decision in `history.md`.
 | `src-tauri/icons/` | `32x32`, `128x128` and `icon.ico` only. Pruned from the full `tauri icon` set on purpose. |
 | `src-tauri/gen/android/` | **Committed** Android Studio project. Carries the receiver, the kiosk activity, the Gradle config and the dev key. |
 | `src-tauri/gen/android/app/src/main/java/com/powerapps/handheld/BarcodeReceiver.kt` | Manifest receiver, extra-key fallbacks, JNI call into Rust. |
-| `src-tauri/gen/android/app/src/main/java/com/powerapps/handheld/MainActivity.kt` | Immersive bars, Back shield, keep-screen-on. |
+| `src-tauri/gen/android/app/src/main/java/com/powerapps/handheld/MainActivity.kt` | Immersive bars, Back shield, keep-screen-on, and the scanner button when the flag is on. |
+| `src-tauri/gen/android/app/src/main/java/com/powerapps/handheld/ScanOverlay.kt` | CameraX preview and decode overlay, torch, tap-to-focus, Back closes it first. |
+| `src-tauri/gen/android/app/src/main/java/com/powerapps/handheld/BarcodeDecoder.kt` | ZXing frame decode over the YUV luma plane. Pure, unit-tested. |
+| `src-tauri/gen/android/app/src/test/` | JVM tests for the decoder; runs in CI with the other unit tests. |
 | `src-tauri/gen/android/app/build.gradle.kts` | Reads `config.json` into manifest placeholders, `BuildConfig` and the native permission overlays; dev signing. |
 | `src-tauri/gen/android/app/src/features/` | One overlay manifest per opt-in device input (`camera`, `microphone`, `location`). Merged by config, not by hand. |
 | `src-tauri/gen/android/gradle.properties` | Configuration cache stays off: the build script reads `config.json` at configuration time, and a cached configuration would survive a config edit and ship the previous permissions. |
@@ -57,7 +63,13 @@ and this contract disagree, fix the code or record the decision in `history.md`.
 - `src-tauri/src/lib.rs` owns the runtime policy: `native_permission` maps a `PermissionKind` to that
   struct and is the only place that decides allow or deny.
 - `src-tauri/gen/android/app/build.gradle.kts` owns the build-time half: the same booleans choose
-  which overlays merge, so the manifest and the runtime cannot disagree.
+  which overlays merge, so the manifest and the runtime cannot disagree. It also exposes
+  `BuildConfig.CAMERA_SCANNER` for the one runtime UI decision.
+- `ScanOverlay.kt` owns the entire camera path: permission request, CameraX binding, analysis loop,
+  duplicate guard, torch and close. It delivers only through `BarcodeReceiver.dispatch`. `BarcodeDecoder.kt`
+  owns pixels to text and nothing else, which is why it is unit-tested without a device.
+- `MainActivity.kt` owns two decisions: whether the button exists, and that Back closes the overlay
+  before the kiosk shield runs.
 - `wizard.html`, `demo.html`, `index.html` and `README.md` own the maker-facing copy and controls. The
   demo page is the hardware harness: its device-inputs panel deliberately calls the same Web APIs.
 
@@ -71,6 +83,7 @@ export JAVA_HOME="$HOME/android-dev/jdk-17"
 export ANDROID_HOME="$HOME/android-dev/sdk"
 export NDK_HOME="$ANDROID_HOME/ndk/27.3.13750724"
 
+(cd src-tauri/gen/android && ./gradlew :app:testUniversalDebugUnitTest)   # decoder unit tests
 cargo fmt --manifest-path src-tauri/Cargo.toml --check
 cargo check --manifest-path src-tauri/Cargo.toml --target aarch64-linux-android --lib
 python3 -m json.tool config.json
@@ -92,8 +105,9 @@ gh workflow run release.yml --ref <branch>                           # build a m
 
 ## Rules
 
-1. **YAGNI.** No settings UI, no IPC commands, no plugins, no database, no updater, no camera, no
-   analytics. The shell frames one page and routes scans into it.
+1. **YAGNI.** No settings UI, no IPC commands, no plugins, no database, no updater, no analytics, no
+   second camera feature. The shell frames one page and routes scans into it, including the one camera
+   reader the config can turn on.
 2. **One-line solutions.** Prefer the standard library or an idiomatic one-liner. Add a helper only
    when it removes a real duplicate or encodes a rule the code cannot show.
 3. **Dependencies stay tiny.** `tauri`, `serde`, `serde_json`, `url`, plus `jni 0.21` for Android

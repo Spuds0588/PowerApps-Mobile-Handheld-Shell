@@ -77,6 +77,10 @@ demo APK doubles as the acceptance harness the way the scan panel already does.
 
 ## v2: bundled camera scanner
 
+**Delivered.** `cameraScanner` is in the shipped schema, the overlay and decoder are in
+`src-tauri/gen/android/app/src/main/java/com/powerapps/handheld/`, and the emulator run in `history.md`
+shows a live camera frame decoded and delivered into the page.
+
 Yes, and it is the cheap kind of yes: the scanner ends up calling the exact function a hardware trigger
 already calls.
 
@@ -132,9 +136,11 @@ scan arrives after focus was lost, which is why it belongs in v1 rather than wit
   the expensive one.
 - Camera scanning needs `CAMERA`, so `cameraScanner: true` declares it even when `camera: false`. That
   is the right kiosk combination: our reader scans, `getUserMedia` stays closed to the app.
-- Decoding on the emulator is awkward, since it needs a virtual-scene poster or the host webcam. The
-  decoder gets a deterministic unit test against a static Code 128 frame; a live camera decode stays a
-  physical-device check.
+- Decoding on the emulator is awkward: the virtual scene shows furniture, not barcodes, and its YUV
+  analysis stream tops out at 640x480. The way that worked was `Toren1BD.posters` in the emulator's
+  `resources/` directory: three extra flat posters placed around the scene camera at 1.6 world units,
+  one holding a generated QR. The decoder's deterministic unit test is the permanent guard; the poster
+  recipe is in `history.md` for the next run.
 - Scanning while the soft keyboard is open: the value lands in the remembered field, but the keyboard
   may stay hidden after the overlay closes. Verify, and restore it if it feels wrong.
 

@@ -9,7 +9,7 @@
   },
   "native": {
     "camera": true,
-    "cameraScanner": false,
+    "cameraScanner": true,
     "microphone": true,
     "location": true
   },

@@ -141,17 +141,26 @@ Design, evidence and open questions live in [native-inputs-plan.md](native-input
       `cmd location providers add-test-provider` is refused for the shell uid. Needs an image with a
       working provider.
 
-## Phase 10 — Camera scanner, v2 (planned)
+## Phase 10 — Camera scanner, v2 (delivered)
 
-- [ ] CameraX and ZXing dependencies, then the decoder plus a `PlanarYUVLuminanceSource` adapter,
-      unit-tested against static Code 128, QR and Data Matrix frames.
-- [ ] CameraX preview overlay inside `MainActivity` (not a second activity, so the WebView and the
+Design and the size argument live in [native-inputs-plan.md](native-inputs-plan.md). The emulator run,
+including a live decode from the virtual-scene camera, is in `history.md`.
+
+- [x] CameraX and ZXing dependencies, then the decoder plus a `PlanarYUVLuminanceSource` adapter,
+      unit-tested against static Code 128, QR and Data Matrix frames. Five JVM tests, including a
+      padded row stride, run green.
+- [x] CameraX preview overlay inside `MainActivity` (not a second activity, so the WebView and the
       page state survive), with torch, tap-to-focus, and Back closing the overlay first.
-- [ ] Delivery through the same `nativeOnScan` the DataWedge broadcast uses, so a camera scan fires
+- [x] Delivery through the same `nativeOnScan` the DataWedge broadcast uses, so a camera scan fires
       `input`, `change` and `barcodeScanned` exactly like a trigger pull, with a duplicate guard.
-- [ ] Floating scan button gated by `cameraScanner`, plus the config block, wizard and README entries.
-- [ ] Measure the APK delta against 11.5 MB; revisit the decoder if it exceeds 3 MB.
-- [ ] One physical-device decode with a printed barcode, recorded as a measurement.
+      Observed on the emulator: the demo page reported field `item`, hook `set` and the 15-character
+      value, with no reload.
+- [x] Floating scan button gated by `cameraScanner`, plus the config block, wizard and README entries.
+- [x] Measure the size the libraries add against the 11.5 MB release; the decoder only has to go if the
+      delta passes 3 MB.
+- [ ] One physical-device decode with a printed barcode, recorded as a measurement. The emulator proved
+      the whole chain against a generated code on the virtual-scene poster; a real lens, a real print and
+      a real focus hunt stay with Phase 8's hardware list.
 
 ## Known gaps
 

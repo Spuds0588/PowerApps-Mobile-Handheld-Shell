@@ -58,6 +58,7 @@ android {
         )
         buildConfigField("boolean", "KEEP_SCREEN_ON", "${shellConfig["keepScreenOn"]}")
         buildConfigField("boolean", "INTERCEPT_BACK_BUTTON", "${shellConfig["interceptBackButton"]}")
+        buildConfigField("boolean", "CAMERA_SCANNER", "${nativeEnabled("cameraScanner")}")
     }
     signingConfigs {
         // A public development key. These APKs are sideloaded internally and never
@@ -121,6 +122,15 @@ dependencies {
     implementation("androidx.activity:activity-ktx:1.10.1")
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.lifecycle:lifecycle-process:2.10.0")
+    // Camera scanner. The libraries ship in every build because AGP 9.3.1 has no way to
+    // add Kotlin sources or dependencies per variant; BuildConfig.CAMERA_SCANNER keeps
+    // every code path closed when the config does not ask for it. Measured cost is in
+    // history.md.
+    implementation("androidx.camera:camera-core:1.4.2")
+    implementation("androidx.camera:camera-camera2:1.4.2")
+    implementation("androidx.camera:camera-lifecycle:1.4.2")
+    implementation("androidx.camera:camera-view:1.4.2")
+    implementation("com.google.zxing:core:3.5.3")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.4")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.0")

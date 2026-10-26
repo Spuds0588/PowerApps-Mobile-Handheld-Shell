@@ -28,6 +28,14 @@ class BarcodeReceiver : BroadcastReceiver() {
     }
 
     Log.d(TAG, "[SCANNER][RECEIVED] Hardware scan captured: $barcode")
+    dispatch(barcode)
+  }
+
+  /**
+   * The one way a scan reaches the page. The camera scanner calls this too, so a
+   * camera scan fires exactly the events a trigger pull fires.
+   */
+  fun dispatch(barcode: String) {
     nativeOnScan(barcode)
   }
 

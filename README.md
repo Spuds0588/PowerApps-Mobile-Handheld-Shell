@@ -80,7 +80,7 @@ commit that starts the build.
 | `native.camera` | Adds the `CAMERA` permission. Default `false`. |
 | `native.microphone` | Adds `RECORD_AUDIO` and `MODIFY_AUDIO_SETTINGS`. Default `false`. |
 | `native.location` | Adds coarse and fine location. Default `false`. |
-| `native.cameraScanner` | Reserved for the camera scanner; declares `CAMERA` without opening the camera to the app. Default `false`. |
+| `native.cameraScanner` | Adds the floating **Scan** button: the APK reads barcodes with the camera, through the same delivery path as a trigger pull. Declares `CAMERA` without opening the camera to the Power App. Default `false`. |
 | `scanner.intentAction` | Broadcast action the OEM scan engine sends. Must match the device profile. |
 | `scanner.intentExtraKey` | String extra holding the barcode. Defaults to Zebra's key. |
 | `allowedDomains` | Domains allowed to load; subdomains included. Everything else is blocked. |
@@ -102,7 +102,25 @@ The camera, microphone and location are opt-in and off by default. Turning one o
 
 Android still shows its own prompt the first time an enabled app asks, and a denied prompt is not
 repeated. To reset one, open **Settings → Apps → <app> → Permissions**, or reinstall the APK. The demo
-profile enables all three so the demo page can exercise them; the shipped `config.json` enables none.
+profile enables all of them so the demo page can exercise them; the shipped `config.json` enables none.
+
+### Camera scanner
+
+A device with no scan engine (a cheap handset, a phone, a tablet) can still scan. `native.cameraScanner`
+adds a floating **Scan** button; tapping it opens a camera preview with a torch and tap-to-focus, and the
+first barcode it reads closes the preview and lands in the page.
+
+- It delivers through `BarcodeReceiver.dispatch`, the call the DataWedge broadcast makes, so a camera
+  scan fires `input`, `change` and `barcodeScanned` exactly like a trigger pull. Power Apps cannot tell
+  them apart, and nothing needs configuring in the app.
+- Formats are Code 128, Code 39, EAN-13, UPC-A, ITF, QR, Data Matrix, PDF 417 and Aztec: ZXing core, no
+  Play Services and no model download, so it works offline.
+- The preview is an overlay inside the running app, never a second screen, so the page keeps its state
+  and the focused field survives. Back closes the preview before the kiosk shield sees it.
+- The ZXing and CameraX libraries are in every APK, even with the flag off; the button, the camera and
+  the permission are not. See `history.md` for the measured size.
+- The Power Apps **Barcode reader** control is still not reachable: Microsoft runs that one natively and
+  never asks the page. This scanner is ours, and it writes into the control the operator last touched.
 
 Attachments and photo capture need no permission: file uploads use the system picker, and the capture
 flow uses the device's camera app. Both are available whatever the three flags say.

@@ -208,6 +208,9 @@ footer { margin-top: 22px; font-size: 12px; color: var(--faint); }
                 <span>Microphone<small>Voice notes and audio capture.</small></span></label>
             <label class="check"><input type="checkbox" id="location">
                 <span>Location<small>Coarse and fine location for the Location signal.</small></span></label>
+            <label class="check"><input type="checkbox" id="cameraScanner">
+                <span>Camera scanner<small>A floating Scan button that reads barcodes with the camera, for
+                    devices without a scan engine. Scans reach the page the same way.</small></span></label>
 
             <div class="field">
                 <label for="intentAction">Scan intent action</label>
@@ -307,6 +310,7 @@ autologon.microsoftazuread-sso.com</textarea>
         keepScreenOn: document.getElementById("keepScreenOn"),
         interceptBackButton: document.getElementById("interceptBackButton"),
         camera: document.getElementById("camera"),
+        cameraScanner: document.getElementById("cameraScanner"),
         microphone: document.getElementById("microphone"),
         location: document.getElementById("location"),
         intentAction: document.getElementById("intentAction"),
@@ -382,6 +386,7 @@ autologon.microsoftazuread-sso.com</textarea>
             interceptBackButton: fields.interceptBackButton.checked,
             native: {
                 camera: fields.camera.checked,
+                cameraScanner: fields.cameraScanner.checked,
                 microphone: fields.microphone.checked,
                 location: fields.location.checked
             },
