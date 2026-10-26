@@ -2,6 +2,29 @@
 
 Newest first. Every number here was measured on this machine or in a named GitHub Actions run.
 
+## 2026-10-26 — Torch, focus and rotation re-run on the released bytes
+
+**Status:** no code changed. The `demo-latest` APK (`30f8891a…`, 11,866,563 bytes) was pulled from the
+release, installed, and the installed `base.apk` was hashed against the download before driving it.
+
+| Check | Result |
+| --- | --- |
+| Torch without a flash unit | button reads **No flash** and is disabled; pressing it changes no torch state and throws nothing |
+| Tap-to-focus | `Focus requested 360,500`, then `Focus 360,500 success=true` in 0.4 s |
+| Analysis through both | counted 60 → 1500 frames, no stall while the focus call was pending |
+| Rotation mid-preview, portrait → landscape | preview and button bar re-laid out, no crash, analysis continued |
+| Back, then reopen | demo page and its state intact, camera bound again, zero `FATAL EXCEPTION` |
+| Camera decode, same bytes, earlier run | poster code decoded three times into field `item`, hook `set`, `input` / `change` / `barcodeScanned` |
+
+**The focus claim did not reproduce.** The debug-build run answered `success=false` after about five
+seconds; the released build answered `success=true` in under half a second. The log line carries
+CameraX's answer in both directions, so README now says that instead of promising a failed focus. The
+virtual camera is not a lens with nothing to focus on, and only a physical device can tell us which
+answer real hardware gives.
+
+Live Pages: `index.html`, `wizard.html` and `demo.html` were hashed against the deployed site and match
+the repository byte for byte.
+
 ## 2026-10-26 — Playing the scanner as an operator found a crash and a lie
 
 **Status:** two defects, both in the scanner shipped in 11,866,563 bytes, both fixed and retested. Back,
@@ -23,9 +46,9 @@ build, because the release is what a maker installs.
    when `cameraInfo.hasFlashUnit()` is false, and the bind log says so. The label follows the request when
    there is a flash unit.
 3. **Tap-to-focus had no observable outcome either way.** It sent the action and hoped. It now logs the
-   request and the result: `Focus requested 640,300`, then `Focus 640,300 success=false` about five seconds
-   later on the virtual camera, with the analysis loop still counting frames throughout. A slow answer on a
-   camera with nothing to focus on is the honest result, not a hang.
+   request and the result, with the analysis loop still counting frames throughout. The virtual camera has
+   answered both ways (`success=false` after about five seconds, `success=true` in 0.4 s on the released
+   build); the log carries CameraX's answer either way, which is the point.
 
 ### What held
 

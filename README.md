@@ -108,9 +108,9 @@ profile enables all of them so the demo page can exercise them; the shipped `con
 
 A device with no scan engine (a cheap handset, a phone, a tablet) can still scan. `native.cameraScanner`
 adds a floating **Scan** button; tapping it opens a camera preview, and the first barcode it reads closes
-the preview and lands in the page. Torch and tap-to-focus follow the hardware: on a camera with no flash
-unit the torch button reads **No flash** and stays disabled, and a device without working autofocus
-answers the tap with a failed focus rather than pretending. Both outcomes are logged.
+the preview and lands in the page. Torch and tap-to-focus report what the camera actually does: on a
+camera with no flash unit the torch button reads **No flash** and stays disabled, and a tap on the
+preview logs CameraX's answer rather than assuming it worked. Both are logged.
 
 - It delivers through `BarcodeReceiver.dispatch`, the call the DataWedge broadcast makes, so a camera
   scan fires `input`, `change` and `barcodeScanned` exactly like a trigger pull. Power Apps cannot tell
