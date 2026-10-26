@@ -69,8 +69,9 @@ still render as pages, and the root `index.html` is served at the site root (ver
    job may be creating this cache.` It first happened when a run was cancelled by `concurrency`
    mid-build, and it repeated on the next successful run (`40337375428`) with no competing job and an
    empty cache list — the reservation never released. Rather than keep a step that warns on every
-   build to save three minutes on a build a maker runs rarely, `Swatinem/rust-cache` was dropped. A
-   cold build is 5m54s end to end.
+   build to save a couple of minutes on a build a maker runs rarely, `Swatinem/rust-cache` was dropped.
+   Cold end-to-end timings measured after that: **5m54s** and **8m11s** (build step 318.7s and 461s) —
+   runner variance, no cache either way. Budget about ten minutes.
 2. **Action majors matter now.** `actions/checkout@v4`, `setup-node@v4`, `setup-java@v4` and
    `upload-artifact@v4` run on Node 20, which the runner forces onto Node 24 with a deprecation
    warning; `setup-java@v4` is itself deprecated. Bumped to `checkout@v7`, `setup-node@v7`,
