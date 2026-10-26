@@ -33,13 +33,13 @@ body {
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
 }
-.wrap { max-width: 1120px; margin: 0 auto; padding: 26px 18px 34px; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 18px 18px 24px; }
 code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9em; background: rgba(255,255,255,.06); border-radius: 5px; padding: 1px 5px; color: var(--code); }
 a { color: var(--code); text-decoration: none; }
 a:hover { text-decoration: underline; }
 a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 18px; }
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
 .top h1 { font-size: 19px; letter-spacing: -.01em; }
 .top .badge {
     font-size: 10.5px;
@@ -69,8 +69,8 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
 }
 .app-bar strong { font-size: 15px; }
 .app-bar span { font-size: 11px; color: #e9d5ff; letter-spacing: .04em; }
-.app-body { padding: 16px; }
-.field { display: block; margin-bottom: 12px; }
+.app-body { padding: 14px; }
+.field { display: block; margin-bottom: 10px; }
 .field span { display: block; font-size: 11.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
 .field input {
     width: 100%;
@@ -97,14 +97,14 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
     background: rgba(56,189,248,.06);
     border: 1px solid rgba(56,189,248,.3);
     border-radius: 10px;
-    padding: 12px 14px;
-    margin-bottom: 12px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
 }
 .last span { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); }
 .last strong {
     display: block;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: clamp(20px, 4.2vw, 28px);
+    font-size: clamp(20px, 4.2vw, 26px);
     font-weight: 600;
     color: var(--ink);
     overflow-wrap: anywhere;
@@ -113,6 +113,7 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
 }
 .last small { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
 .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-bottom: 12px; }
+@media (min-width: 900px) { .facts { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .fact { background: rgba(255,255,255,.025); border: 1px solid var(--border); border-radius: 9px; padding: 8px 10px; }
 .fact span { display: block; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
 .fact b { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
@@ -211,7 +212,6 @@ button.primary { background: linear-gradient(135deg, #2f6fed, #5964a6); border-c
     var samples = ["00012345678905", "MAT-4417-B", "PLT-0093-22", "8901234567897"];
     var next = 0;
     var scans = 0;
-    var events = [];
     var started = Date.now();
 
     var item = document.getElementById("f-item");
@@ -260,7 +260,6 @@ button.primary { background: linear-gradient(135deg, #2f6fed, #5964a6); border-c
         input.addEventListener("click", note);
         ["input", "change"].forEach(function (type) {
             input.addEventListener(type, function (event) {
-                events.push(type);
                 line("ev", type.padEnd(7, " ") + names[id] + "  \"" + event.target.value + "\"");
                 clock.textContent = "last event " + stamp();
             });
@@ -282,8 +281,6 @@ button.primary { background: linear-gradient(135deg, #2f6fed, #5964a6); border-c
         set("f-hook", value ? "set" : "empty");
         set("focus-line", field ? "Last scan landed in " + field + "." : "No field had the cursor, so the value went to the hook.");
         line("ok", "event   barcodeScanned  \"" + value + "\"");
-        line("ev", "trail   " + (events.length ? events.join(" \u2192 ") + " \u2192 barcodeScanned" : "barcodeScanned"));
-        events = [];
         clock.textContent = "last scan " + stamp();
     });
 

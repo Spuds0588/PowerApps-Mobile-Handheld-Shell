@@ -108,8 +108,9 @@ gh workflow run release.yml --ref <branch>                           # build a m
     `v*` tag into `tauri.conf.json` and `Cargo.toml`, asserts the APK carries that version, and
     publishes the APK on a `vX.Y.Z` release. The tag is the version record: the stamp is never
     committed back, because that push would restart the job. Docs-only pushes (`**.md`, `index.html`,
-    `.nojekyll`, `LICENSE`) do not build or release. A run from any other ref builds and uploads but
-    publishes nothing, which is how a maker tests a config without cutting a version.
+    `.nojekyll`, `LICENSE`, and the two Pages pages `wizard.html` and `demo.html`) do not build or
+    release. A run from any other ref builds and uploads but publishes nothing, which is how a maker
+    tests a config without cutting a version.
 14. **The demo is a profile, not a branch.** `config.demo.json` is copied over `config.json` inside the
     runner when the workflow is dispatched with `config=demo`; the APK goes to the rolling
     `demo-latest` pre-release and never gets a version tag. The template repository itself publishes no

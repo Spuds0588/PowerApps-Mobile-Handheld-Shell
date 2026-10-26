@@ -9,6 +9,8 @@ on:
     paths-ignore:
       - '**.md'
       - 'index.html'
+      - 'wizard.html'
+      - 'demo.html'
       - '.nojekyll'
       - 'LICENSE'
   workflow_dispatch:
