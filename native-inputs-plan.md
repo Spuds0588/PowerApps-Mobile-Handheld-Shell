@@ -169,6 +169,9 @@ v2:
 
 ## Phases
 
+The checklist of record is Phase 9 and Phase 10 in [todo.md](todo.md); this table carries only the
+estimate and the exit criteria for each phase.
+
 | Phase | Work | Est. | Done when |
 | --- | --- | --- | --- |
 | v1.1 | Config schema, overlays, Gradle wiring, `uses-feature`, runtime gate, startup log | 2-3 h | All flags off: `INTERNET` only. All on: the six. Both assemble locally |
