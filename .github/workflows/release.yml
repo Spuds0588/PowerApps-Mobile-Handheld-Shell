@@ -185,6 +185,32 @@ jobs:
           strings -a /tmp/libshell.so | grep -F "$APP_NAME" > /dev/null
           echo "Embedded config found in libshell.so: $APP_NAME"
 
+          echo "--- device permissions match config.json ---"
+          "$BT/aapt2" dump permissions "$APK" > /tmp/permissions.txt
+          cat /tmp/permissions.txt
+          python3 - <<'PY'
+          import json, re
+
+          native = json.load(open("config.json")).get("native", {})
+          want = {"android.permission.INTERNET"}
+          if native.get("camera") or native.get("cameraScanner"):
+              want.add("android.permission.CAMERA")
+          if native.get("microphone"):
+              want |= {"android.permission.RECORD_AUDIO", "android.permission.MODIFY_AUDIO_SETTINGS"}
+          if native.get("location"):
+              want |= {"android.permission.ACCESS_COARSE_LOCATION", "android.permission.ACCESS_FINE_LOCATION"}
+
+          dumped = open("/tmp/permissions.txt").read()
+          have = set(re.findall(r"uses-permission: name=['\"]([^'\"]+)['\"]", dumped))
+          # Libraries may declare their own signature permissions; only device-facing ones count.
+          device = {p for p in have if p.startswith("android.permission.")}
+          missing, extra = sorted(want - device), sorted(device - want)
+          print("expected:", sorted(want))
+          print("in APK:  ", sorted(device))
+          if missing or extra:
+              raise SystemExit(f"permission mismatch vs config.json: missing={missing} extra={extra}")
+          PY
+
       - name: Upload APK
         uses: actions/upload-artifact@v7
         with:

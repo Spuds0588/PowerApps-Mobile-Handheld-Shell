@@ -155,6 +155,25 @@ button:hover { background: rgba(255,255,255,.09); }
 button.primary { background: linear-gradient(135deg, #2f6fed, #5964a6); border-color: transparent; color: #fff; }
 .strip { margin-top: 16px; font-size: 12px; color: var(--faint); }
 .strip strong { color: var(--muted); }
+
+/* Device inputs harness, behind a button so the 720p layout does not move. */
+.caps-open { font: inherit; font-size: 12px; color: var(--muted); background: rgba(255,255,255,.05); border: 1px solid var(--border); border-radius: 8px; padding: 6px 11px; cursor: pointer; }
+.caps-panel { position: fixed; inset: 0; z-index: 20; background: rgba(6,9,17,.95); padding: 18px; overflow: auto; }
+.caps-panel[hidden] { display: none; }
+.caps-inner { max-width: 880px; margin: 0 auto; background: var(--panel-2); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+.caps-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.caps-head h2 { font-size: 15px; }
+.caps-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.cap { border: 1px solid var(--border); border-radius: 9px; padding: 9px 11px; background: rgba(255,255,255,.025); }
+.cap h3 { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); margin-bottom: 6px; }
+.cap p { font-size: 12.5px; color: var(--muted); margin-top: 6px; overflow-wrap: anywhere; }
+.cap p b { color: var(--ink); }
+.cap video { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 7px; margin-top: 8px; background: #000; }
+.cap-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.meter { height: 6px; border-radius: 3px; background: rgba(255,255,255,.08); margin-top: 8px; overflow: hidden; }
+.meter i { display: block; height: 100%; width: 0; background: var(--green); }
+.cap input[type=file] { font: inherit; font-size: 12px; color: var(--muted); max-width: 100%; }
+.cap input[type=file]::file-selector-button { font: inherit; font-size: 12px; color: var(--muted); background: rgba(255,255,255,.05); border: 1px solid var(--border); border-radius: 6px; padding: 4px 9px; margin-right: 8px; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -162,6 +181,7 @@ button.primary { background: linear-gradient(135deg, #2f6fed, #5964a6); border-c
     <header class="top">
         <h1>Pick list</h1>
         <span class="badge">Template demo</span>
+        <button type="button" class="caps-open" id="caps-open">Device inputs</button>
         <p>This page stands in for a Power App. The demo APK loads it, and the panel below reports what
             reached the page when you pulled the trigger.</p>
     </header>
@@ -205,6 +225,48 @@ button.primary { background: linear-gradient(135deg, #2f6fed, #5964a6); border-c
                 <code>powerAppUrl</code> in <code>config.json</code> with your own app and it is gone.</p>
         </section>
     </div>
+
+    <div class="caps-panel" id="caps-panel" hidden>
+        <div class="caps-inner">
+            <div class="caps-head">
+                <h2>Device inputs</h2>
+                <button type="button" id="caps-close">Close</button>
+            </div>
+            <p class="strip" style="margin-top:0">These run in the demo page itself, using the same Android
+                permissions the APK declares. On a handheld, grant the prompt and check each one before
+                handing the device over.</p>
+            <div class="caps-grid">
+                <div class="cap">
+                    <h3>Camera</h3>
+                    <div class="cap-actions">
+                        <button type="button" class="primary" id="cam-start">Start camera</button>
+                        <button type="button" id="cam-stop" disabled>Stop</button>
+                    </div>
+                    <video id="cam" playsinline muted hidden></video>
+                    <p id="cam-state">idle</p>
+                </div>
+                <div class="cap">
+                    <h3>Microphone</h3>
+                    <div class="cap-actions">
+                        <button type="button" class="primary" id="mic-start">Start microphone</button>
+                        <button type="button" id="mic-stop" disabled>Stop</button>
+                    </div>
+                    <div class="meter"><i id="mic-meter"></i></div>
+                    <p id="mic-state">idle</p>
+                </div>
+                <div class="cap">
+                    <h3>File upload</h3>
+                    <input type="file" id="file-pick">
+                    <p id="file-state">no file chosen</p>
+                </div>
+                <div class="cap">
+                    <h3>Location</h3>
+                    <div class="cap-actions"><button type="button" id="geo-read">Read location</button></div>
+                    <p id="geo-state">not read</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -245,11 +307,9 @@ button.primary { background: linear-gradient(135deg, #2f6fed, #5964a6); border-c
 
     function set(id, value) { document.getElementById(id).textContent = value; }
 
-    function activeField() {
-        var el = document.activeElement;
-        if (!el || (el.tagName !== "INPUT" && el.tagName !== "TEXTAREA")) return null;
-        return names[el.id] || el.id || "field";
-    }
+    // The shell writes the value, then fires input/change. The target of the most
+    // recent of those is the field that received it, whether or not it still has focus.
+    var lastWritten = null;
 
     ["f-bin", "f-item", "f-qty"].forEach(function (id) {
         var input = document.getElementById(id);
@@ -260,6 +320,7 @@ button.primary { background: linear-gradient(135deg, #2f6fed, #5964a6); border-c
         input.addEventListener("click", note);
         ["input", "change"].forEach(function (type) {
             input.addEventListener(type, function (event) {
+                lastWritten = id;
                 line("ev", type.padEnd(7, " ") + names[id] + "  \"" + event.target.value + "\"");
                 clock.textContent = "last event " + stamp();
             });
@@ -269,17 +330,18 @@ button.primary { background: linear-gradient(135deg, #2f6fed, #5964a6); border-c
     // The shell dispatches this after it writes the value and fires input/change.
     window.addEventListener("barcodeScanned", function (event) {
         var value = event.detail == null ? "" : String(event.detail);
-        var field = activeField();
+        var field = lastWritten ? names[lastWritten] : null;
+        lastWritten = null;
         scans += 1;
         set("last-value", value || "(empty)");
         set("last-meta", field
             ? "Landed in \u201c" + field + "\u201d at " + new Date().toLocaleTimeString()
-            : "No field was focused, so the shell kept it in the hook only.");
+            : "No field to write, so the shell kept it in the hook only.");
         set("f-count", String(scans));
         set("f-length", String(value.length));
         set("f-field", field || "none");
         set("f-hook", value ? "set" : "empty");
-        set("focus-line", field ? "Last scan landed in " + field + "." : "No field had the cursor, so the value went to the hook.");
+        set("focus-line", field ? "Last scan landed in " + field + "." : "No field to write, so the value is in window.__LAST_BARCODE__.");
         line("ok", "event   barcodeScanned  \"" + value + "\"");
         clock.textContent = "last scan " + stamp();
     });
@@ -324,6 +386,108 @@ button.primary { background: linear-gradient(135deg, #2f6fed, #5964a6); border-c
         } else {
             done(false);
         }
+    });
+})();
+</script>
+<script>
+/* Device inputs harness. Nothing here is part of the shell; it exercises the same
+   Android permissions the APK declares, so a device can be checked before handover. */
+(function () {
+    var panel = document.getElementById("caps-panel");
+    document.getElementById("caps-open").addEventListener("click", function () { panel.hidden = false; });
+    document.getElementById("caps-close").addEventListener("click", function () { panel.hidden = true; });
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") { panel.hidden = true; }
+    });
+
+    var cam = document.getElementById("cam");
+    var camState = document.getElementById("cam-state");
+    var camStream = null;
+    document.getElementById("cam-start").addEventListener("click", function () {
+        if (!navigator.mediaDevices) { camState.textContent = "camera needs https or localhost"; return; }
+        camState.textContent = "asking...";
+        navigator.mediaDevices.getUserMedia({ video: true }).then(function (stream) {
+            camStream = stream;
+            cam.srcObject = stream;
+            cam.hidden = false;
+            cam.play();
+            var track = stream.getVideoTracks()[0];
+            camState.innerHTML = "live: <b>" + (track.label || "camera") + "</b>";
+            document.getElementById("cam-start").disabled = true;
+            document.getElementById("cam-stop").disabled = false;
+        }, function (err) {
+            camState.innerHTML = "refused: <b>" + err.name + "</b>";
+        });
+    });
+    document.getElementById("cam-stop").addEventListener("click", function () {
+        if (camStream) { camStream.getTracks().forEach(function (t) { t.stop(); }); }
+        camStream = null;
+        cam.srcObject = null;
+        cam.hidden = true;
+        camState.textContent = "stopped";
+        document.getElementById("cam-start").disabled = false;
+        document.getElementById("cam-stop").disabled = true;
+    });
+
+    var micState = document.getElementById("mic-state");
+    var meter = document.getElementById("mic-meter");
+    var micStream = null, audio = null, analyser = null, samples = null, raf = 0;
+    function tick() {
+        analyser.getByteTimeDomainData(samples);
+        var peak = 0;
+        for (var i = 0; i < samples.length; i += 1) {
+            peak = Math.max(peak, Math.abs(samples[i] - 128));
+        }
+        meter.style.width = Math.min(100, peak * 2) + "%";
+        raf = requestAnimationFrame(tick);
+    }
+    document.getElementById("mic-start").addEventListener("click", function () {
+        if (!navigator.mediaDevices) { micState.textContent = "microphone needs https or localhost"; return; }
+        micState.textContent = "asking...";
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+            micStream = stream;
+            audio = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audio.createAnalyser();
+            analyser.fftSize = 512;
+            samples = new Uint8Array(analyser.fftSize);
+            audio.createMediaStreamSource(stream).connect(analyser);
+            tick();
+            var track = stream.getAudioTracks()[0];
+            micState.innerHTML = "open: <b>" + (track.label || "microphone") + "</b>";
+            document.getElementById("mic-start").disabled = true;
+            document.getElementById("mic-stop").disabled = false;
+        }, function (err) {
+            micState.innerHTML = "refused: <b>" + err.name + "</b>";
+        });
+    });
+    document.getElementById("mic-stop").addEventListener("click", function () {
+        cancelAnimationFrame(raf);
+        if (micStream) { micStream.getTracks().forEach(function (t) { t.stop(); }); }
+        if (audio) { audio.close(); }
+        micStream = audio = analyser = samples = null;
+        meter.style.width = "0%";
+        micState.textContent = "stopped";
+        document.getElementById("mic-start").disabled = false;
+        document.getElementById("mic-stop").disabled = true;
+    });
+
+    document.getElementById("file-pick").addEventListener("change", function () {
+        var file = this.files && this.files[0];
+        document.getElementById("file-state").innerHTML = file
+            ? "<b>" + file.name + "</b><br>" + (file.size / 1024).toFixed(1) + " KB, " + (file.type || "unknown type")
+            : "no file chosen";
+    });
+
+    document.getElementById("geo-read").addEventListener("click", function () {
+        var state = document.getElementById("geo-state");
+        state.textContent = "asking...";
+        if (!navigator.geolocation) { state.textContent = "no geolocation in this webview"; return; }
+        navigator.geolocation.getCurrentPosition(function (pos) {
+            state.innerHTML = "<b>" + pos.coords.latitude.toFixed(5) + ", " + pos.coords.longitude.toFixed(5) +
+                "</b><br>±" + Math.round(pos.coords.accuracy) + " m";
+        }, function (err) {
+            state.innerHTML = "refused: <b>" + err.message + "</b>";
+        }, { timeout: 15000, enableHighAccuracy: true });
     });
 })();
 </script>

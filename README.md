@@ -20,7 +20,9 @@ to watch the shell work before you configure anything. It is built from `config.
 [demo.html](https://spuds0588.github.io/PowerApps-Mobile-Handheld-Shell/demo.html), a stand-in pick list
 with a diagnostics panel: focus a field, pull the trigger, and the page reports the value it received,
 the field it landed in, and the `input` / `change` / `barcodeScanned` trail behind it. With no scanner
-to hand, the page's **Simulate a scan** button performs the same DOM write the shell performs.
+to hand, the page's **Simulate a scan** button performs the same DOM write the shell performs. A
+collapsed **Device inputs** panel exercises the camera, microphone, file picker and location the same
+way, which is how you confirm a device before handing it to an operator.
 
 The demo release is rebuilt in place with `gh workflow run release.yml -f config=demo`. A demo run
 never creates a version tag, and nothing is published unless it runs on `main`.
@@ -28,9 +30,9 @@ never creates a version tag, and nothing is published unless it runs on `main`.
 ## Use this template
 
 1. Click **Use this template** and create your repository.
-2. Edit `config.json`: `appName`, `powerAppUrl`, `scanner`, `allowedDomains`, and the two kiosk flags.
-   The [config builder](https://spuds0588.github.io/PowerApps-Mobile-Handheld-Shell/wizard.html) writes
-   the file for you if you would rather not edit JSON.
+2. Edit `config.json`: `appName`, `powerAppUrl`, `scanner`, `native`, `allowedDomains`, and the two kiosk
+   flags. The [config builder](https://spuds0588.github.io/PowerApps-Mobile-Handheld-Shell/wizard.html)
+   writes the file for you if you would rather not edit JSON.
 3. Commit. The push starts **Build and Release Handheld APK**.
    A fresh copy may not run on its initial commit. If no run appears, open
    **Actions → Build and Release Handheld APK → Run workflow**.
@@ -75,14 +77,35 @@ commit that starts the build.
 | `powerAppUrl` | The Power Apps `/play/` link that opens on launch. |
 | `keepScreenOn` | Prevents the display from sleeping during a shift. |
 | `interceptBackButton` | Swallows the hardware and gesture Back button. |
+| `native.camera` | Adds the `CAMERA` permission. Default `false`. |
+| `native.microphone` | Adds `RECORD_AUDIO` and `MODIFY_AUDIO_SETTINGS`. Default `false`. |
+| `native.location` | Adds coarse and fine location. Default `false`. |
+| `native.cameraScanner` | Reserved for the camera scanner; declares `CAMERA` without opening the camera to the app. Default `false`. |
 | `scanner.intentAction` | Broadcast action the OEM scan engine sends. Must match the device profile. |
 | `scanner.intentExtraKey` | String extra holding the barcode. Defaults to Zebra's key. |
 | `allowedDomains` | Domains allowed to load; subdomains included. Everything else is blocked. |
 
 Invalid JSON, a missing key or a malformed `powerAppUrl` fails the build: `src-tauri/build.rs`
 validates the file with the same schema the app uses, and `app/build.gradle.kts` reads it for the
-Android label and the scanner intent filter. The schema is
+Android label, the scanner intent filter and the device permissions. The schema is
 [`src-tauri/src/config.rs`](src-tauri/src/config.rs).
+
+### Device inputs
+
+The camera, microphone and location are opt-in and off by default. Turning one on does two things:
+
+- `app/build.gradle.kts` merges the matching permission overlay from
+  `src-tauri/gen/android/app/src/features/`, so the APK only carries permissions its config uses. The
+  camera, microphone and GPS features are marked not required, so a handheld without them still installs.
+- `src-tauri/src/lib.rs` becomes the runtime gate. A permission the config does not enable is denied
+  before Android is asked, and logged as `[NATIVE][DENIED] <kind> is not enabled in config.json`.
+
+Android still shows its own prompt the first time an enabled app asks, and a denied prompt is not
+repeated. To reset one, open **Settings → Apps → <app> → Permissions**, or reinstall the APK. The demo
+profile enables all three so the demo page can exercise them; the shipped `config.json` enables none.
+
+Attachments and photo capture need no permission: file uploads use the system picker, and the capture
+flow uses the device's camera app. Both are available whatever the three flags say.
 
 Add every domain your app or its sign-in flow needs to `allowedDomains`. The shipped list is
 Microsoft's documented Power Apps set: `*.powerapps.com` (the play and content hosts),
@@ -103,7 +126,8 @@ rather than a crash. Source:
 3. The payload crosses into Rust over JNI (`Java_com_powerapps_handheld_BarcodeReceiver_nativeOnScan`).
 4. Rust evaluates a small script in the running webview: native value setter, then `input` and
    `change` events on `document.activeElement`, plus `window.__LAST_BARCODE__` and a
-   `barcodeScanned` window event.
+   `barcodeScanned` window event. If the page lost focus, the last field the operator touched is used
+   instead of the body.
 
 No navigation, no reload, no query parameter, so an in-progress form survives a hundred scans.
 

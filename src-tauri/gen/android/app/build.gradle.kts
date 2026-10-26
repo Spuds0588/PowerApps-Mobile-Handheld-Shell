@@ -21,6 +21,24 @@ val tauriProperties = Properties().apply {
 val shellConfig = JsonSlurper().parse(file("../../../../config.json")) as Map<*, *>
 val scannerConfig = shellConfig["scanner"] as Map<*, *>
 
+// Native device permissions are opt-in, so the APK only declares what its config can
+// use. Each enabled feature merges one overlay from src/features/; an older config.json
+// with no `native` block gets no overlays at all.
+val nativeConfig = (shellConfig["native"] as? Map<*, *>) ?: emptyMap<String, Any>()
+fun nativeEnabled(key: String) = nativeConfig[key] == true
+
+androidComponents {
+    onVariants { variant ->
+        mapOf(
+            "camera" to (nativeEnabled("camera") || nativeEnabled("cameraScanner")),
+            "microphone" to nativeEnabled("microphone"),
+            "location" to nativeEnabled("location"),
+        ).filterValues { it }.keys.forEach { feature ->
+            variant.sources.manifests.addStaticManifestFile("src/features/$feature/AndroidManifest.xml")
+        }
+    }
+}
+
 android {
     compileSdk = 37
     namespace = "com.powerapps.handheld"

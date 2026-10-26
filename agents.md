@@ -16,8 +16,11 @@ scanner, a forklift tablet or a low-cost handset - and does exactly this:
 - Check every navigation against `allowedDomains` (apex plus subdomains) and log
   `[SECURITY][BLOCKED]` on rejection.
 - Honour `keepScreenOn` and `interceptBackButton`, and keep the system bars hidden.
-- Do nothing else: no camera scanning, no database, no sync, no MDM, no second window, no updater,
-  no telemetry, no IPC surface.
+- Grant camera, microphone and location only when `config.json` enables them in `native`, and deny
+  anything else before Android is asked (`[NATIVE][DENIED]`). Permissions are declared at build time
+  from the same block, so an APK never carries one its config cannot use.
+- Do nothing else: no camera barcode decoding (the scan engine owns that), no database, no sync, no
+  MDM, no second window, no updater, no telemetry, no IPC surface.
 
 The brief has been absorbed into this contract, `src-tauri/src/config.rs` and `history.md`. If code
 and this contract disagree, fix the code or record the decision in `history.md`.
@@ -36,7 +39,9 @@ and this contract disagree, fix the code or record the decision in `history.md`.
 | `src-tauri/gen/android/` | **Committed** Android Studio project. Carries the receiver, the kiosk activity, the Gradle config and the dev key. |
 | `src-tauri/gen/android/app/src/main/java/com/powerapps/handheld/BarcodeReceiver.kt` | Manifest receiver, extra-key fallbacks, JNI call into Rust. |
 | `src-tauri/gen/android/app/src/main/java/com/powerapps/handheld/MainActivity.kt` | Immersive bars, Back shield, keep-screen-on. |
-| `src-tauri/gen/android/app/build.gradle.kts` | Reads `config.json` into manifest placeholders and `BuildConfig`; dev signing. |
+| `src-tauri/gen/android/app/build.gradle.kts` | Reads `config.json` into manifest placeholders, `BuildConfig` and the native permission overlays; dev signing. |
+| `src-tauri/gen/android/app/src/features/` | One overlay manifest per opt-in device input (`camera`, `microphone`, `location`). Merged by config, not by hand. |
+| `src-tauri/gen/android/gradle.properties` | Configuration cache stays off: the build script reads `config.json` at configuration time, and a cached configuration would survive a config edit and ship the previous permissions. |
 | `src-tauri/gen/android/app/dev-release.keystore` | Public development key. Committed on purpose. |
 | `ui/index.html` | Packaged splash asset. Not mounted, because the window opens on the remote URL. |
 | `index.html` | Published front door (GitHub Pages, legacy `main` / root source). |
@@ -44,6 +49,17 @@ and this contract disagree, fix the code or record the decision in `history.md`.
 | `demo.html` | Stand-in Power App served by Pages. Three inputs plus the scanner passthrough panel. |
 | `config.demo.json` | Demo profile. Points the shell at `demo.html`; copied over `config.json` only in a demo build. |
 | `.github/workflows/release.yml` | Android APK build, artifact verification, version stamping, a numbered GitHub release for copies, and the rolling `demo-latest` release for the demo profile. |
+
+### Native inputs structure
+
+- `src-tauri/src/config.rs` owns the `native` schema (`camera`, `cameraScanner`, `microphone`,
+  `location`, all defaulting to false). One struct, shared by `build.rs` and the runtime.
+- `src-tauri/src/lib.rs` owns the runtime policy: `native_permission` maps a `PermissionKind` to that
+  struct and is the only place that decides allow or deny.
+- `src-tauri/gen/android/app/build.gradle.kts` owns the build-time half: the same booleans choose
+  which overlays merge, so the manifest and the runtime cannot disagree.
+- `wizard.html`, `demo.html`, `index.html` and `README.md` own the maker-facing copy and controls. The
+  demo page is the hardware harness: its device-inputs panel deliberately calls the same Web APIs.
 
 ## Commands
 
@@ -111,7 +127,12 @@ gh workflow run release.yml --ref <branch>                           # build a m
     `.nojekyll`, `LICENSE`, and the two Pages pages `wizard.html` and `demo.html`) do not build or
     release. A run from any other ref builds and uploads but publishes nothing, which is how a maker
     tests a config without cutting a version.
-14. **The demo is a profile, not a branch.** `config.demo.json` is copied over `config.json` inside the
+14. **New device permissions go through `native`.** Add the flag to `NativeConfig`, to `config.json`
+    and `config.demo.json`, and to the Gradle overlay switch; add an overlay manifest under
+    `src-tauri/gen/android/app/src/features/`; and cover it in `native-inputs-plan.md` and the
+    acceptance checks. Never declare a permission unconditionally: the manifest and the runtime gate
+    must agree, and the template's promise is that an APK carries only what its config uses.
+15. **The demo is a profile, not a branch.** `config.demo.json` is copied over `config.json` inside the
     runner when the workflow is dispatched with `config=demo`; the APK goes to the rolling
     `demo-latest` pre-release and never gets a version tag. The template repository itself publishes no
     numbered releases, because its `config.json` is still the placeholder; a copy has a different
@@ -126,8 +147,9 @@ producing a working artifact. Therefore:
    successful run download the artifact and inspect it.
 2. **The workflow verifies its own APK** before uploading: `apksigner verify`, `aapt2 dump badging`,
    presence of both `lib/*/libpowerapps_mobile_handheld_shell.so`, the `BarcodeReceiver` action in the
-   merged manifest, and `"powerAppUrl"` inside the stripped native library. Keep those checks; they
-   are what stops a broken APK from shipping as a green run.
+   merged manifest, `"powerAppUrl"` inside the stripped native library, and the device permission list
+   against `config.json`. Keep those checks; they are what stops a broken APK from shipping as a
+   green run.
 3. **Pin the moving parts.** JDK 17, Rust 1.95.0, `@tauri-apps/cli` 2.12.4, NDK 27.3.13750724,
    `platforms;android-37.0`, `build-tools;37.0.0`. The SDK platform package is `android-37.0` (with
    the `.0`); `platforms;android-37` does not exist and `sdkmanager` silently finds nothing.
