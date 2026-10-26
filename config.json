@@ -7,6 +7,12 @@
     "intentAction": "com.powerapps.handheld.SCAN",
     "intentExtraKey": "com.symbol.datawedge.data_string"
   },
+  "native": {
+    "camera": false,
+    "cameraScanner": false,
+    "microphone": false,
+    "location": false
+  },
   "allowedDomains": [
     "apps.powerapps.com",
     "content.powerapps.com",

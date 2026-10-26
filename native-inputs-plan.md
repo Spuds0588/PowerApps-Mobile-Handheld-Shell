@@ -198,6 +198,11 @@ v1 is about a day. v2 is about three more.
 - Files: an upload from Downloads works with no permission; capture writes a JPEG through the provider.
 - Install compatibility: `aapt dump badging` reports camera, microphone and GPS as not required.
 
+The only image on this host is an Android TV build: no DocumentsUI, a camera stub instead of a camera
+app, and no GPS provider (`cmd location providers add-test-provider` is refused for the shell uid). The
+upload, capture and location-readout checks therefore stay open; everything else in the list was
+observed and recorded in `history.md`.
+
 ## Open decisions
 
 1. **Downloads.** No Android support exists in wry, so attachment saves and PDF exports do nothing.

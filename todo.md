@@ -102,34 +102,44 @@ recorded in `history.md`. Anything that needs rugged hardware stays unchecked on
 - [ ] Confirm keep-screen-on through a full shift with the screen timeout set low.
 - [ ] Sign in with a real Entra ID tenant and add any extra domains it needs to `allowedDomains`.
 
-## Phase 9 — Native inputs, v1 (planned)
+## Phase 9 — Native inputs, v1 (delivered)
 
-Design, evidence and open questions live in [native-inputs-plan.md](native-inputs-plan.md). Nothing here
-is built yet.
+Design, evidence and open questions live in [native-inputs-plan.md](native-inputs-plan.md). Delivered in
+#3 (`755e472`); the emulator run and the two checks this image could not answer are in `history.md`.
 
-- [ ] `native` block in the config schema (`camera`, `cameraScanner`, `microphone`, `location`), all
-      `false` by default and `#[serde(default)]`, so every existing `config.json` still builds.
-- [ ] Build-time permission overlays driven by that block through
+- [x] `native` block in the config schema (`camera`, `cameraScanner`, `microphone`, `location`), all
+      `false` by default and `#[serde(default)]`, so every existing `config.json` still builds. Proven by
+      a unit test over a config with no block, and by the default build declaring `INTERNET` only.
+- [x] Build-time permission overlays driven by that block through
       `variant.sources.manifests.addStaticManifestFile`, plus `uses-feature … required="false"` for
       camera, microphone and GPS. `CAMERA` is declared for `cameraScanner` too.
-- [ ] Runtime gate through `on_permission_request`: `Default` when enabled, `Deny` with
-      `[NATIVE][DENIED] …` when not, so a config that says off stays off even if MDM granted it.
-- [ ] `[CONFIG] native …` startup line, matching the existing config logging.
-- [ ] `file_paths.xml` gains `external-files-path`, so `<input capture>` stops silently falling back to
-      the file picker.
-- [ ] Last-focused-field memory in the init script and the injection script, so a scan that arrives
-      after focus was lost still lands in the field the operator was using.
-- [ ] `demo.html` capabilities card: camera preview, microphone level, file name and size, location
+- [x] Runtime gate through `on_permission_request`: `Default` when enabled, `Deny` with
+      `[NATIVE][DENIED] …` when not, so a config that says off stays off even if MDM granted it. An
+      all-off APK logged three denials and showed no system dialog.
+- [x] `[CONFIG] Native camera=… cameraScanner=… microphone=… location=…` startup line, next to the
+      existing kiosk and scanner config lines.
+- [x] `file_paths.xml` gains `external-files-path`, the root `getExternalFilesDir` resolves to, so the
+      capture URI wry builds is inside a declared path instead of throwing and falling back.
+- [x] Last-focused-field memory in the init script and the injection script, so a scan that arrives
+      after focus was lost still lands in the field the operator was using. Observed after tapping away.
+- [x] `demo.html` capabilities card: camera preview, microphone level, file name and size, location
       readout, and a blob download that shows the known gap honestly. `config.demo.json` turns the
       features on.
-- [ ] Builder checkboxes for the three permissions, written into the generated JSON; front-door
+- [x] Builder checkboxes for the three permissions, written into the generated JSON; front-door
       "Honest limits" wording and config table; README permission notes and how to reset a denial.
-- [ ] `agents.md` gains one rule: a new device permission goes through the `native` block and
+- [x] `agents.md` gains one rule: a new device permission goes through the `native` block and
       `native-inputs-plan.md`, so the next agent does not add one ad hoc.
-- [ ] CI: the Verify APK step asserts the built permission list matches the config, so a regression
-      fails the build instead of shipping.
-- [ ] Emulator checks from the plan's acceptance matrix, with permission counts, sizes and runs
+- [x] CI: the Verify APK step asserts the built permission list matches the config, so a regression
+      fails the build instead of shipping. Green for `INTERNET` alone and for the six.
+- [x] Emulator checks from the plan's acceptance matrix, with permission counts, sizes and runs
       recorded in `history.md`.
+- [ ] Photo capture and file upload seen end to end. This system image has no DocumentsUI and only a TV
+      camera stub, so `<input type=file>` answers "You don't have an app that can do this". Needs a
+      phone or handheld image.
+- [ ] The location **fix** in the demo readout. `adb emu geo fix` is accepted and `dumpsys location`
+      shows the app's own `HIGH_ACCURACY` request, but this image registers no GPS provider and
+      `cmd location providers add-test-provider` is refused for the shell uid. Needs an image with a
+      working provider.
 
 ## Phase 10 — Camera scanner, v2 (planned)
 

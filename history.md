@@ -2,6 +2,113 @@
 
 Newest first. Every number here was measured on this machine or in a named GitHub Actions run.
 
+## 2026-10-26 — Native inputs v1: an opt-in permission gate, offline by default
+
+**Status:** merged as #3 (`755e472`). The default config's APK declares `INTERNET` and nothing else; the
+demo config's declares the six. Camera preview, microphone capture and the location prompt were observed
+on the emulator. The location fix, file upload and photo capture were not: this system image has no GPS
+provider, no DocumentsUI and only a TV camera stub. Those three stay unchecked in `todo.md`.
+
+### What changed
+
+- `src-tauri/src/config.rs`: `NativeConfig` (`camera`, `cameraScanner`, `microphone`, `location`), all
+  `false`, `#[serde(default)]` on the field and `default` on the struct, plus a test that a `config.json`
+  written before the block existed still parses with every input off.
+- `src-tauri/gen/android/app/build.gradle.kts`: reads the same block and merges one overlay per enabled
+  feature with `variant.sources.manifests.addStaticManifestFile`. `cameraScanner` maps to the camera
+  overlay, so our own reader can hold `CAMERA` while `getUserMedia` stays closed to the page.
+- `src-tauri/gen/android/app/src/features/{camera,microphone,location}/AndroidManifest.xml`: the
+  permissions, plus `uses-feature … required="false"` for camera, microphone, location and GPS, because
+  declaring `CAMERA` or a location permission otherwise filters out devices that lack the hardware.
+- `src-tauri/src/lib.rs`: `native_permission` is the whole runtime policy — one match from
+  `PermissionKind` to a config flag, `Default` when on, `Deny` plus
+  `[NATIVE][DENIED] <kind> is not enabled in config.json` when off. Mounted once through
+  `.on_permission_request` on the window builder. One `[CONFIG] Native …` startup line beside the kiosk
+  and scanner lines. `INIT_SCRIPT` keeps `__LAST_FOCUS__`; `INJECTION_SCRIPT` falls back to it when
+  `document.activeElement` is no longer a text field.
+- `file_paths.xml`: `external-files-path` with `path="."`, which is exactly `getExternalFilesDir(null)`.
+  wry writes a captured photo to `…/files/Pictures` under that root, so the provider can build its URI.
+- `gradle.properties`: `org.gradle.configuration-cache=false`. Gradle was caching the overlay set, so a
+  config edit rebuilt the APK with the permissions from the config before it.
+- Maker surfaces: `wizard.html` device checkboxes written into the generated JSON, `demo.html` a
+  capabilities card behind one button, the front door's config table and "Honest limits" wording,
+  `README.md`'s permission table, the no-permission note for uploads and capture, and how to reset a
+  denied prompt.
+- `release.yml`: the existing **Verify APK** step now derives the expected permission list from
+  `config.json` and fails the job on any difference.
+- `agents.md`: rule 14, a new device permission goes through the block, the overlay folder and the plan.
+
+### Runs and permission lists
+
+| Run | Config | Job | Device permissions |
+| --- | --- | --- | --- |
+| `40398494767` branch `feat/native-inputs-v1` | demo profile | 6m34s, green | – |
+| `40399624409` push `main` | shipped `config.json` | 7m55s, green | `INTERNET` only, expected and in APK |
+| `40400135768` dispatch `config=demo` | demo profile | 5m39s, green | the six, expected and in APK |
+
+The six are `INTERNET`, `CAMERA`, `RECORD_AUDIO`, `MODIFY_AUDIO_SETTINGS`, `ACCESS_COARSE_LOCATION`
+and `ACCESS_FINE_LOCATION`. `demo-latest` re-published at **11,499,314 bytes**.
+
+### On the emulator (demo APK, API 36, 1280x720)
+
+| Check | Result |
+| --- | --- |
+| Boot | `[CONFIG] Native camera=true cameraScanner=false microphone=true location=true` |
+| Camera on | system prompt, granted, live preview labelled `camera 0, facing back`, Stop released it |
+| Microphone on | system prompt, granted, `open: microphone` and the level bar moving |
+| Location on | system prompt for location, granted coarse and fine |
+| Deny path | an all-off APK logged three `[NATIVE][DENIED]` lines and showed no system dialog |
+| Focus memory | focus moved off the fields, then a broadcast scan landed in the last field anyway |
+| File upload | "You don't have an app that can do this" — no DocumentsUI on this image |
+
+### Findings
+
+1. **The Gradle configuration cache silently freezes the permission set.** `build.gradle.kts` reads
+   `config.json` at configuration time, which the cache cannot see, so switching a flag and rebuilding
+   shipped the previous manifest. Turning the cache off costs a few seconds a build and removes a class
+   of "the APK has the wrong permissions" reports that looks like a shell bug.
+2. **`addStaticManifestFile` is still there in AGP 9.3.1**, which is why the permission overlays need no
+   second module, no `src/<variant>` duplication and no product flavours. One folder per feature, one
+   map entry in Gradle, and a feature that is off leaves no line in the merged manifest.
+3. **wry's geolocation hook reads backwards.** `onGeolocationPermissionRequestNative` returns a boolean
+   where `true` means *deny* and `false` means *let Android's normal flow continue*, including the
+   runtime request. A handler that returned `false` for "denied" would grant exactly what the config
+   turned off; the gate therefore returns `PermissionResponse::Deny`, never a raw boolean, and the
+   emulator run showed the runtime prompt arriving only for the feature that was on.
+4. **The capture fix is a path mapping, not code.** Without `external-files-path`, `getUriForFile` throws
+   for `…/files/Pictures`, and wry catches that and shows a plain file picker instead of the camera — no
+   error anywhere, which is why the bug read as "photo capture does nothing".
+5. **The only installed system image is an Android TV build**, so `<input type=file>` has no picker app
+   and `IMAGE_CAPTURE` resolves to `com.android.tv.frameworkpackagestubs.Stubs$CameraStub`. Blocked on
+   the image, not on the shell.
+6. **The same image registers no GPS provider.** `adb emu geo fix` is acknowledged, `dumpsys location`
+   shows the app's own `Request[@0, HIGH_ACCURACY, WorkSource{10090 com.powerapps.handheld}]`, and no fix
+   arrives; `cmd location providers add-test-provider gps` is refused with
+   `SecurityException: android from uid 2000 not allowed to perform MOCK_LOCATION`. The request side of
+   the location path is proven, the readout is not.
+7. **An unanswered prompt reads as a refusal.** Chromium ends a `getCurrentPosition` call after about
+   ten seconds, so the panel showed `refused: Timeout expired` for the first location attempt while the
+   system dialog was still up. Read the logcat line and the permission state before treating that as a
+   shell fault.
+8. **A capture probe on the demo page was written, tried, and dropped.** With no camera app it could
+   only prove the same toast, and the plan's card does not carry it; the demo now documents capture
+   rather than pretending to test it.
+
+### Structure this left behind
+
+Each concern has one owner, and they meet only through `config.json`:
+
+- `src-tauri/src/config.rs` — the schema and the defaults. The only place that names the four flags.
+- `src-tauri/src/lib.rs` — runtime policy. `native_permission` is the single decision point, consumed
+  once by the webview builder; the page-side fallbacks live in the two scripts next to it.
+- `src-tauri/gen/android/app/build.gradle.kts` — build-time permissions. One map from feature name to
+  enabled, one overlay path each; nothing else in Gradle knows about `native`.
+- `src-tauri/gen/android/app/src/features/<feature>/AndroidManifest.xml` — the permissions and the
+  `uses-feature` lines for that feature, and nothing else. Removing a feature is deleting one folder and
+  one map entry.
+- Pages — `wizard.html` writes the block, `demo.html` exercises the result, `index.html` and `README.md`
+  explain it. None of them duplicate the permission list; they read the same flags.
+
 ## 2026-10-26 — Demo profile, a device test page, and a config builder
 
 **Status:** the two verification releases and their tags are gone. The repository carries one
