@@ -70,8 +70,8 @@ still render as pages, and the root `index.html` is served at the site root (ver
    mid-build, and it repeated on the next successful run (`40337375428`) with no competing job and an
    empty cache list — the reservation never released. Rather than keep a step that warns on every
    build to save a couple of minutes on a build a maker runs rarely, `Swatinem/rust-cache` was dropped.
-   Cold end-to-end timings measured after that: **5m54s** and **8m11s** (build step 318.7s and 461s) —
-   runner variance, no cache either way. Budget about ten minutes.
+   Cold end-to-end timings measured after that: **5m54s** and **8m11s** (build step 318.7s and 440.2s,
+   SDK install 2.9s versus 15.7s) — runner variance, no cache either way. Budget about ten minutes.
 2. **Action majors matter now.** `actions/checkout@v4`, `setup-node@v4`, `setup-java@v4` and
    `upload-artifact@v4` run on Node 20, which the runner forces onto Node 24 with a deprecation
    warning; `setup-java@v4` is itself deprecated. Bumped to `checkout@v7`, `setup-node@v7`,
