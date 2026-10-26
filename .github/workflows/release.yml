@@ -1,12 +1,21 @@
-name: Build Handheld PowerApps APK
+name: Build and Release Handheld APK
 
 on:
   push:
     branches: [main]
+    # The APK is built from config.json, src-tauri/ and ui/. A documentation or
+    # front-door push changes nothing the device runs, so it neither spends runner
+    # time nor cuts a release.
+    paths-ignore:
+      - '**.md'
+      - 'index.html'
+      - '.nojekyll'
+      - 'LICENSE'
   workflow_dispatch:
 
+# Creating the release and its tag is the only write this job needs.
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: release-${{ github.ref }}
@@ -28,6 +37,11 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+        with:
+          # Tags choose the next version and set the base of the generated release
+          # notes. A shallow clone has neither, so it would republish a version
+          # that already exists.
+          fetch-depth: 0
 
       - name: Set up Node
         uses: actions/setup-node@v7
@@ -73,12 +87,46 @@ jobs:
       - name: Install Tauri CLI
         run: npm install --global @tauri-apps/cli@${{ env.TAURI_CLI }}
 
+      # A patch bump on the newest v* tag. A fresh copy of the template has no
+      # tags at all, so its first build is v1.0.0. The version is written into the
+      # two manifests Tauri reads and never committed back: the tag is the record,
+      # and a push from CI would restart this job forever.
+      - name: Stamp the next version
+        run: |
+          set -euo pipefail
+          LAST="$(git tag --list 'v[0-9]*' --sort=-v:refname | head -1)"
+          if [ -z "$LAST" ]; then
+            NEXT="1.0.0"
+          else
+            IFS=. read -r MAJOR MINOR PATCH <<< "${LAST#v}"
+            NEXT="$MAJOR.$MINOR.$((PATCH + 1))"
+          fi
+          python3 - "$NEXT" <<'PY'
+          import pathlib, re, sys
+
+          version = sys.argv[1]
+          config = pathlib.Path("src-tauri/tauri.conf.json")
+          config.write_text(
+              re.sub(r'"version": "[^"]+"', f'"version": "{version}"',
+                     config.read_text(), count=1)
+          )
+          cargo = pathlib.Path("src-tauri/Cargo.toml")
+          cargo.write_text(
+              re.sub(r'(?m)^version = "[^"]+"', f'version = "{version}"',
+                     cargo.read_text(), count=1)
+          )
+          PY
+          echo "Previous tag: ${LAST:-none, this is a fresh copy of the template}"
+          echo "Release version: v$NEXT"
+          echo "APP_VERSION=$NEXT" >> "$GITHUB_ENV"
+
       - name: Verify toolchain
         run: |
           java -version
           rustc --version
           tauri --version
           echo "NDK_HOME=$NDK_HOME"
+          echo "APP_VERSION=$APP_VERSION"
 
       - name: Build release APK
         run: tauri android build --apk --target aarch64 --target armv7 --ci
@@ -96,18 +144,24 @@ jobs:
           "$BT/apksigner" verify --verbose "$APK"
 
           echo "--- badging ---"
-          "$BT/aapt2" dump badging "$APK" | grep -E "^package:|^application-label:|^sdkVersion:|^targetSdkVersion:"
+          BADGING="$("$BT/aapt2" dump badging "$APK")"
+          echo "$BADGING" | grep -E "^package:|^application-label:|^sdkVersion:|^targetSdkVersion:|^native-code:"
+          # The tag and the APK it describes must never drift apart.
+          echo "$BADGING" | grep -q "versionName='$APP_VERSION'" || {
+            echo "APK versionName does not match the release version v$APP_VERSION"; exit 1; }
 
           echo "--- packaged payloads ---"
-          unzip -l "$APK" | grep -E "classes.dex|AndroidManifest.xml|lib/arm64-v8a/|lib/armeabi-v7a/"
-          unzip -l "$APK" | grep -q "lib/arm64-v8a/libpowerapps_mobile_handheld_shell.so"
-          unzip -l "$APK" | grep -q "lib/armeabi-v7a/libpowerapps_mobile_handheld_shell.so"
+          unzip -l "$APK" | grep -E "classes\.dex|AndroidManifest\.xml|lib/(arm64-v8a|armeabi-v7a)/"
+          for ABI in arm64-v8a armeabi-v7a; do
+            unzip -l "$APK" | grep -Eq " lib/$ABI/[^/]+\.so$" || {
+              echo "No native library packaged for $ABI"; exit 1; }
+          done
 
           echo "--- config.json baked into the manifest ---"
           "$BT/aapt2" dump xmltree --file AndroidManifest.xml "$APK" | grep -A2 "BarcodeReceiver"
 
           echo "--- the maker's config.json baked into the native library ---"
-          unzip -p "$APK" lib/arm64-v8a/libpowerapps_mobile_handheld_shell.so > /tmp/libshell.so
+          unzip -p "$APK" lib/arm64-v8a/*.so > /tmp/libshell.so
           APP_NAME="$(python3 -c "import json;print(json.load(open('config.json'))['appName'])")"
           POWER_APP_URL="$(python3 -c "import json;print(json.load(open('config.json'))['powerAppUrl'])")"
           strings -a /tmp/libshell.so | grep -F "$POWER_APP_URL" > /dev/null
@@ -122,3 +176,40 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+      # Only after the build and every check above have passed, and only from main.
+      # A branch run, which is how a maker tests a config without touching their
+      # default branch, builds and uploads but publishes nothing.
+      - name: Publish release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Re-running a job must not cut a second release for the same commit.
+          if git tag --points-at "$GITHUB_SHA" | grep -q '^v[0-9]'; then
+            echo "This commit is already released: $(git tag --points-at "$GITHUB_SHA" | tr '\n' ' ')"
+            exit 0
+          fi
+
+          APK="$(ls src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk)"
+          NOTES="$(mktemp)"
+          {
+            echo "APK for the \`config.json\` in this tag. Signed with the committed development key."
+            echo
+            echo '```'
+            echo "adb install -r app-universal-release.apk"
+            echo '```'
+            echo
+            echo "| Built from | config.json |"
+            echo "| --- | --- |"
+            echo "| App name | $(python3 -c "import json;print(json.load(open('config.json'))['appName'])") |"
+            echo "| Power App | $(python3 -c "import json;print(json.load(open('config.json'))['powerAppUrl'])") |"
+            echo "| Scan action | \`$(python3 -c "import json;print(json.load(open('config.json'))['scanner']['intentAction'])")\` |"
+          } > "$NOTES"
+
+          gh release create "v$APP_VERSION" "$APK" \
+            --title "v$APP_VERSION" \
+            --notes-file "$NOTES" \
+            --generate-notes \
+            --target "$GITHUB_SHA"
+          echo "Published $(gh release view "v$APP_VERSION" --json url --jq .url)"

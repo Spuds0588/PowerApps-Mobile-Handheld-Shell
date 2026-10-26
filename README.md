@@ -1,9 +1,11 @@
 # PowerApps Mobile Handheld Shell
 
-A Tauri v2 Android shell that puts one Microsoft Power App on one rugged handheld. `config.json` is
+A Tauri v2 Android shell that gives one Microsoft Power App its own device: a warehouse scanner, a
+forklift-mounted tablet, a low-cost handset or the phone a field tech carries. `config.json` is
 compiled into the APK, so a device gets one installable file with no loose configuration. Hardware
 scan engine broadcasts are typed straight into the focused Power Apps control, with no reload and no
-query-string round trip. GitHub Actions builds the APK from a copied template.
+query-string round trip. GitHub Actions builds the APK from a copied template and publishes it as a
+numbered release.
 
 [Template page](https://spuds0588.github.io/PowerApps-Mobile-Handheld-Shell/) &middot;
 [Latest build](https://github.com/Spuds0588/PowerApps-Mobile-Handheld-Shell/actions/workflows/release.yml)
@@ -15,10 +17,11 @@ are for internal sideloading, not for any app store.
 
 1. Click **Use this template** and create your repository.
 2. Edit `config.json`: `appName`, `powerAppUrl`, `scanner`, `allowedDomains`, and the two kiosk flags.
-3. Commit. The push starts **Build Handheld PowerApps APK**.
+3. Commit. The push starts **Build and Release Handheld APK**.
    A fresh copy may not run on its initial commit. If no run appears, open
-   **Actions → Build Handheld PowerApps APK → Run workflow**.
-4. In the latest green run, download **PowerApps-Handheld-Release-APK** and sideload the APK:
+   **Actions → Build and Release Handheld APK → Run workflow**.
+4. When the run is green, download the APK from the newest release on the **Releases** page and
+   sideload it:
 
    ```bash
    adb install -r app-universal-release.apk
@@ -28,8 +31,12 @@ are for internal sideloading, not for any app store.
    enable **Intent output**, set delivery to **Broadcast intent**, and set the intent action to the
    same string as `scanner.intentAction` (`com.powerapps.handheld.SCAN` by default).
 
-Your APK is a build artifact, not a release. It is tied to your repository and expires, so download
-it when you need it.
+Each green build on `main` publishes the next patch version: `v1.0.0`, `v1.0.1`, `v1.0.2`, and so on,
+with the APK attached and a table of the `config.json` it was built from. The version is stamped into
+the APK at build time, and the workflow fails if the APK's version and the release tag disagree. The
+run also uploads the APK as the `PowerApps-Handheld-Release-APK` artifact, but artifacts expire and
+releases do not, so use the release. A push that only changes Markdown or the front page cuts no
+release.
 
 ## Agent handoff
 
@@ -57,9 +64,17 @@ validates the file with the same schema the app uses, and `app/build.gradle.kts`
 Android label and the scanner intent filter. The schema is
 [`src-tauri/src/config.rs`](src-tauri/src/config.rs).
 
-Add every domain your app or its sign-in flow needs to `allowedDomains`. Navigation outside the list
-is blocked and logged as `[SECURITY][BLOCKED]`; nothing else breaks, so a missing domain shows up as a
-stuck page in logcat rather than a crash.
+Add every domain your app or its sign-in flow needs to `allowedDomains`. The shipped list is
+Microsoft's documented Power Apps set: `*.powerapps.com` (the play and content hosts),
+`login.microsoftonline.com`, `login.microsoft.com`, `login.windows.net`,
+`secure.aadcdn.microsoftonline-p.com`, plus the sign-in CDNs (`aadcdn.msauth.net`,
+`aadcdn.msftauth.net`), the federated STS host and the seamless SSO host. A tenant can still need more:
+Microsoft's Power Apps requirements table also names the CDN (`*.azureedge.net`, `*.azurefd.net`),
+profile (`graph.microsoft.com`) and connector (`*.azure-apim.net`) hosts, and a personal Microsoft
+account signs in through `login.live.com`. Navigation outside the list is blocked and logged as
+`[SECURITY][BLOCKED]`; nothing else breaks, so a missing domain shows up as a stuck page in logcat
+rather than a crash. Source:
+[Power Apps system requirements and limits](https://learn.microsoft.com/en-us/power-apps/limits-and-config).
 
 ## How scanning works
 
@@ -74,10 +89,12 @@ No navigation, no reload, no query parameter, so an in-progress form survives a 
 
 ## Where the APK lands
 
+- Published: the newest release on the [Releases](https://github.com/Spuds0588/PowerApps-Mobile-Handheld-Shell/releases) page, as `app-universal-release.apk`.
 - In the run: `src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk`.
-- Downloaded: `app-universal-release.apk` inside the `PowerApps-Handheld-Release-APK` artifact.
-- The workflow verifies the APK before uploading: signature, both ARM libraries, the merged manifest's
-  receiver action, and the compiled-in `config.json`.
+- Downloaded from the run: `app-universal-release.apk` inside the `PowerApps-Handheld-Release-APK`
+  artifact, which expires after 90 days.
+- The workflow verifies the APK before publishing: signature, both ARM libraries, the version matching
+  the tag, the merged manifest's receiver action, and the compiled-in `config.json`.
 
 ## Verify and maintain
 

@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PowerApps Mobile Handheld Shell — Tauri Android template</title>
-<meta name="description" content="A free, MIT-licensed Tauri v2 template that packages one Microsoft Power Apps screen into a locked-down Android APK for Zebra, Honeywell and Datalogic handhelds. Edit config.json, push, and GitHub Actions builds the APK.">
+<title>PowerApps Mobile Handheld Shell — one Power App, any Android device</title>
+<meta name="description" content="A free, MIT-licensed Tauri v2 template that gives one Microsoft Power App its own locked-down Android APK on warehouse scanners, forklift tablets, low-cost handsets and other field devices. Edit config.json, push, and GitHub Actions builds the APK.">
 <link rel="canonical" href="https://spuds0588.github.io/PowerApps-Mobile-Handheld-Shell/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="PowerApps Mobile Handheld Shell — Tauri Android template">
-<meta property="og:description" content="One Power App, one dedicated APK, hardware scans typed straight into the form. Configure one file; GitHub Actions builds the APK.">
+<meta property="og:title" content="PowerApps Mobile Handheld Shell — one Power App, any Android device">
+<meta property="og:description" content="One Power App on one dedicated Android device, with hardware scans typed straight into the focused field. Configure one file; GitHub Actions builds the APK.">
 <meta property="og:url" content="https://spuds0588.github.io/PowerApps-Mobile-Handheld-Shell/">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0b0f19">
@@ -423,21 +423,22 @@ footer .refs a { color: #7b8ca6; }
 
 <header class="hero">
     <span class="badge">Tauri v2 &middot; Android 7+ &middot; MIT</span>
-    <h1>The scanner goes straight into the form.</h1>
-    <p class="lede"><strong>PowerApps Mobile Handheld Shell</strong> packs one Power App into a dedicated
-        Android APK. It boots straight into that screen, hides the browser, and types every hardware scan
-        into whatever field the operator already has focused, with no reload and no page change.</p>
+    <h1>Give one Power App its own Android device.</h1>
+    <p class="lede"><strong>PowerApps Mobile Handheld Shell</strong> gives one Power App its own Android APK
+        on a warehouse scanner, a forklift tablet, or the cheap handset a field tech carries. The device
+        boots straight into your screen with no browser and no app switcher, and every hardware scan
+        types into the field the operator already has focused, with no reload and no page change.</p>
     <div class="cta-row">
         <a class="btn btn-primary" href="https://github.com/Spuds0588/PowerApps-Mobile-Handheld-Shell/generate">Use this template</a>
         <a class="btn btn-secondary" href="#flow">See the flow &rarr;</a>
     </div>
     <p class="micro">No Android Studio, no Rust install, no NDK. Edit <code>config.json</code>, push, and
-        GitHub Actions hands back the APK.</p>
-    <div class="stack" aria-label="Supported hardware">
-        <span>Zebra DataWedge</span>
-        <span>Honeywell Enterprise Scan</span>
-        <span>Datalogic</span>
-        <span>Power Apps</span>
+        GitHub Actions builds the APK and publishes it as a numbered release.</p>
+    <div class="stack" aria-label="Devices this shell runs on">
+        <span>Warehouse scanners</span>
+        <span>Forklift &amp; counter tablets</span>
+        <span>Low-cost handsets</span>
+        <span>Android 7+</span>
     </div>
 </header>
 
@@ -528,7 +529,8 @@ footer .refs a { color: #7b8ca6; }
         <div class="step">
             <span class="n">3</span>
             <h3>Commit</h3>
-            <p>The push builds the APK. Download it from <strong>Actions &rarr; Artifacts</strong> and sideload it.</p>
+            <p>The push builds the APK and publishes it as a release. Download it from
+                <strong>Releases</strong> and sideload it.</p>
         </div>
     </div>
 </section>
@@ -664,10 +666,13 @@ footer .refs a { color: #7b8ca6; }
         <p>Ubuntu runner, JDK 17, Android SDK and NDK, Rust targets for 64-bit and 32-bit ARM.</p>
     </div>
     <div class="callout">
-        <p><strong>Every run verifies its own artifact</strong> before uploading: the APK is checked for a
+        <p><strong>Every run verifies its own artifact</strong> before publishing: the APK is checked for a
             valid signature, both ARM libraries, the barcode receiver in the merged manifest, and the
             compiled-in <code>config.json</code>. A build that produces a broken APK fails instead of
             looking green.</p>
+        <p>Each green build on <code>main</code> publishes the next numbered release with the APK attached,
+            so there is always a downloadable file rather than an artifact that expires. Documentation
+            commits do not cut a release.</p>
         <div class="callout-actions">
             <a class="btn btn-primary" href="https://github.com/Spuds0588/PowerApps-Mobile-Handheld-Shell/actions/workflows/release.yml">Latest build</a>
             <a class="btn btn-secondary" href="https://github.com/Spuds0588/PowerApps-Mobile-Handheld-Shell/blob/main/config.json">See config.json</a>
