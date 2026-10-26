@@ -27,27 +27,38 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 20
 
       - name: Set up JDK
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
+      # The ubuntu runner already ships an Android SDK with cmdline-tools, and
+      # android-actions/setup-android@v3 broke the job by running the long-removed
+      # `sdkmanager tools` package. Install exactly the packages this build needs
+      # instead of relying on a third-party setup action.
       - name: Install Android platform, build tools and NDK
         run: |
+          set -euo pipefail
+          echo "Using Android SDK at $ANDROID_HOME"
+          test -d "$ANDROID_HOME"
+          if ! command -v sdkmanager > /dev/null; then
+            CMDLINE_TOOLS="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin | sort -V | tail -1)"
+            echo "$CMDLINE_TOOLS" >> "$GITHUB_PATH"
+            export PATH="$CMDLINE_TOOLS:$PATH"
+          fi
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
           sdkmanager --install "$ANDROID_PLATFORM" "$ANDROID_BUILD_TOOLS" "ndk;$NDK_VERSION" "platform-tools"
           echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
           test -d "$ANDROID_HOME/ndk/$NDK_VERSION"
+          test -d "$ANDROID_HOME/platforms/android-37.0"
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -107,7 +118,7 @@ jobs:
           echo "Embedded config found in libshell.so: $APP_NAME"
 
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: PowerApps-Handheld-Release-APK
           path: src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
