@@ -102,6 +102,45 @@ recorded in `history.md`. Anything that needs rugged hardware stays unchecked on
 - [ ] Confirm keep-screen-on through a full shift with the screen timeout set low.
 - [ ] Sign in with a real Entra ID tenant and add any extra domains it needs to `allowedDomains`.
 
+## Phase 9 — Native inputs, v1 (planned)
+
+Design, evidence and open questions live in [native-inputs-plan.md](native-inputs-plan.md). Nothing here
+is built yet.
+
+- [ ] `native` block in the config schema (`camera`, `cameraScanner`, `microphone`, `location`), all
+      `false` by default and `#[serde(default)]`, so every existing `config.json` still builds.
+- [ ] Build-time permission overlays driven by that block through
+      `variant.sources.manifests.addStaticManifestFile`, plus `uses-feature … required="false"` for
+      camera, microphone and GPS. `CAMERA` is declared for `cameraScanner` too.
+- [ ] Runtime gate through `on_permission_request`: `Default` when enabled, `Deny` with
+      `[NATIVE][DENIED] …` when not, so a config that says off stays off even if MDM granted it.
+- [ ] `[CONFIG] native …` startup line, matching the existing config logging.
+- [ ] `file_paths.xml` gains `external-files-path`, so `<input capture>` stops silently falling back to
+      the file picker.
+- [ ] Last-focused-field memory in the init script and the injection script, so a scan that arrives
+      after focus was lost still lands in the field the operator was using.
+- [ ] `demo.html` capabilities card: camera preview, microphone level, file name and size, location
+      readout, and a blob download that shows the known gap honestly. `config.demo.json` turns the
+      features on.
+- [ ] Builder checkboxes for the three permissions, written into the generated JSON; front-door
+      "Honest limits" wording and config table; README permission notes and how to reset a denial.
+- [ ] CI: the Verify APK step asserts the built permission list matches the config, so a regression
+      fails the build instead of shipping.
+- [ ] Emulator checks from the plan's acceptance matrix, with permission counts, sizes and runs
+      recorded in `history.md`.
+
+## Phase 10 — Camera scanner, v2 (planned)
+
+- [ ] ZXing decoder plus a `PlanarYUVLuminanceSource` adapter, unit-tested against static Code 128, QR
+      and Data Matrix frames.
+- [ ] CameraX preview overlay inside `MainActivity` (not a second activity, so the WebView and the
+      page state survive), with torch, tap-to-focus, and Back closing the overlay first.
+- [ ] Delivery through the same `nativeOnScan` the DataWedge broadcast uses, so a camera scan fires
+      `input`, `change` and `barcodeScanned` exactly like a trigger pull, with a duplicate guard.
+- [ ] Floating scan button gated by `cameraScanner`, plus the config block, wizard and README entries.
+- [ ] Measure the APK delta against 11.5 MB; revisit the decoder if it exceeds 3 MB.
+- [ ] One physical-device decode with a printed barcode, recorded as a measurement.
+
 ## Known gaps
 
 - Every green `main` build cuts a release immediately; there is no draft or approval step, and the
