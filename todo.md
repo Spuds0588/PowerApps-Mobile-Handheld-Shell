@@ -81,15 +81,15 @@ recorded in `history.md`. Anything that needs rugged hardware stays unchecked on
 
 ## Phase 7 — Demo profile and config builder
 
-- [ ] `demo.html`: stand-in Power App with three inputs, a last-value panel, field and length facts, the
+- [x] `demo.html`: stand-in Power App with three inputs, a last-value panel, field and length facts, the
       `input` / `change` / `barcodeScanned` trail, and a simulate button for desktop visitors.
-- [ ] `wizard.html`: four steps, per-step validation, prefilled Microsoft sign-in hosts, copy and
+- [x] `wizard.html`: four steps, per-step validation, prefilled Microsoft sign-in hosts, copy and
       download, checked at 1280 px and 390 px.
-- [ ] `config.demo.json` plus a `config=demo` dispatch that publishes `demo-latest` as a pre-release and
+- [x] `config.demo.json` plus a `config=demo` dispatch that publishes `demo-latest` as a pre-release and
       never creates a version tag.
-- [ ] Demo APK installed on the emulator, demo page loaded over Pages, a broadcast scan landing in the
+- [x] Demo APK installed on the emulator, demo page loaded over Pages, a broadcast scan landing in the
       focused field with the diagnostics panel confirming the string.
-- [ ] Test releases `v1.0.0` and `v1.0.1` and their tags removed, demo release in their place.
+- [x] Test releases `v1.0.0` and `v1.0.1` and their tags removed, demo release in their place.
 
 ## Phase 8 — Needs a physical handheld (cannot be done on this host)
 

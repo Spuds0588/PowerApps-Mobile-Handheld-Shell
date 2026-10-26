@@ -2,10 +2,73 @@
 
 Newest first. Every number here was measured on this machine or in a named GitHub Actions run.
 
+## 2026-10-26 — Demo profile, a device test page, and a config builder
+
+**Status:** the two verification releases and their tags are gone. The repository carries one
+pre-release, `demo-latest`, whose APK opens the Pages demo page. That APK was installed on the emulator
+and a broadcast scan filled the page's focused field, with the page's own panel confirming the value.
+
+### What changed
+
+- `demo.html`: a stand-in pick list served by Pages. Three inputs, a last-value panel, length/field/hook
+  facts, and the `input` / `change` / `barcodeScanned` trail. **Simulate a scan** performs the same DOM
+  write the shell performs: the `HTMLInputElement.prototype` setter, then `input`, `change`, and a
+  `barcodeScanned` event dispatched on `window`.
+- `config.demo.json`: the demo profile. It points at
+  `https://spuds0588.github.io/PowerApps-Mobile-Handheld-Shell/demo.html` and allows only
+  `spuds0588.github.io`.
+- `wizard.html`: a four-step builder (app, device, domains, config) with per-step validation, the
+  Microsoft sign-in hosts prefilled, a copy button and a `config.json` download. It writes the same six
+  keys the template reads.
+- The workflow takes a `workflow_dispatch` input `config` (`production` or `demo`) and its own
+  concurrency group per profile. A demo run copies `config.demo.json` over `config.json` inside the
+  runner, publishes `demo-latest` as a pre-release with the APK renamed `PowerApps-Handheld-Demo.apk`,
+  and never stamps a version tag.
+- The template repository skips numbered releases (`github.repository` check), because its own
+  `config.json` is still the placeholder. A copy has a different repository name, so it releases
+  normally.
+- `demo.html` and `wizard.html` joined `paths-ignore`: the APK embeds a URL, not the page.
+
+### Runs and artifact
+
+| Run | What it proves | Job wall | Build step | Publish step |
+| --- | --- | --- | --- | --- |
+| `40382354353` push `292f388` | production build is green and the template publishes nothing | 485s | 442.0s | both skipped |
+| `40382420224` dispatch `config=demo` | the demo profile builds, verifies and publishes | 390s | 353.0s | demo 4.0s |
+
+The demo release is the only one on the repository. `PowerApps-Handheld-Demo.apk`, **11,527,282
+bytes**, SHA-256 `ba6c25f799576a48ee6b7183fe4a87c4014be8886c3c9af5fd7f800097af6bc0`:
+`versionCode='1000000' versionName='1.0.0'`, label `PowerApps Shell Demo`, both ARM ABIs,
+`Verifies` under signature v2, and the demo URL and app name inside the stripped library.
+
+### The demo APK on the emulator
+
+| Check | Result |
+| --- | --- |
+| Install | `Success`; launcher label `PowerApps Shell Demo` |
+| Boot | `[INIT] Starting PowerApps Mobile Handheld Shell: 'PowerApps Shell Demo'` |
+| Navigation | `[NAVIGATION][ALLOWED] https://spuds0588.github.io/PowerApps-Mobile-Handheld-Shell/demo.html` |
+| Scan | a broadcast with the configured action reached Kotlin and Rust, then `[SCANNER][SUCCESS]` |
+| Page | `MAT-4417-B` landed in the focused Item field; the panel reported length 10, field `item`, hook `set`, and `input` / `change` / `barcodeScanned` at 14:11:01.889, .890 and .905 |
+| Layout | Four facts on one row and the whole trail inside 1280x720, with no scroll |
+
+### Findings
+
+1. **A `CustomEvent` needs `bubbles: true` to reach a `window` listener from an input.** The shell
+   dispatches on `window`, so the demo must do the same; dispatching on the input filled the field while
+   the diagnostics panel stayed empty, which reads exactly like a broken injection path.
+2. **Deleting a release with `--cleanup-tag` resets the version.** With both `v*` tags gone, the next
+   stamp is `v1.0.0`, which is why the demo APK reports 1.0.0.
+3. **`demo.html` and `wizard.html` do not belong in the build trigger.** A page edit now reaches Pages
+   without spending nine minutes of runner time.
+4. **The fact grid wrapped at 1280x720** (`auto-fit` chose three tracks), pushing the trail below the
+   fold. Four fixed columns at 900px and up fixed it, and the redundant trail summary line was dropped.
+
 ## 2026-10-26 — Numbered releases, proven from a config-only push
 
 **Status:** three green runs, two published releases. `v1.0.0` and `v1.0.1` each carry the APK, and
-the `v1.0.1` APK was installed and exercised on the emulator with its ARM64 library.
+the `v1.0.1` APK was installed and exercised on the emulator with its ARM64 library. **Later:** both
+releases were deleted, since they were built from the placeholder config; see the demo entry above.
 
 ### What changed
 
