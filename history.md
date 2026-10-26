@@ -2,6 +2,82 @@
 
 Newest first. Every number here was measured on this machine or in a named GitHub Actions run.
 
+## 2026-10-26 — First green CI run, Pages unblocked
+
+**Status:** run `40336020894` (push, commit `924bc3f`) succeeded. Job wall **5m54s**; the APK build
+step alone was **318.7s** on a cold Rust cache. Artifact `PowerApps-Handheld-Release-APK` downloaded
+and inspected by hand.
+
+### Step timings (that run)
+
+| Step | Wall |
+| --- | --- |
+| Set up job / Node / JDK / SDK+NDK install | 4.2s / 4.9s / 0.1s / 2.9s |
+| Set up Rust | 10.8s |
+| Cache Rust build | 0.4s (miss) |
+| Install Tauri CLI | 1.0s |
+| **Build release APK** | **318.7s** |
+| Verify APK | 0.9s |
+| Upload APK | 1.7s |
+
+### The downloaded artifact
+
+- `app-universal-release.apk`, **11,527,470 bytes**, SHA-256 `9b019688aa93fce2a92086459fa40265c4b8acc641a9f42119d7cbea73ff063d`.
+- Signed with the committed dev key — same certificate SHA-256 (`4ae9b5f4…980f`) as the local build.
+- `com.powerapps.handheld`, versionName 1.0.0, targetSdk 37, label `PowerApps Handheld Shell`,
+  `native-code: 'arm64-v8a' 'armeabi-v7a'`.
+- `lib/arm64-v8a/libpowerapps_mobile_handheld_shell.so` (5,964,288 B) and
+  `lib/armeabi-v7a/libpowerapps_mobile_handheld_shell.so` (3,926,684 B).
+- Manifest carries `com.powerapps.handheld.BarcodeReceiver`, `exported=true`.
+- The stripped `.so` still contains `"powerAppUrl": "https://apps.powerapps.com/play/e/default-tenant/a/app-id?tenantId=your-tenant-id"`
+  and `"appName": "PowerApps Handheld Shell"`, so the committed config really is compiled in.
+- The workflow's own `Verify APK` step printed `Verifies` and
+  `Embedded config found in libshell.so: PowerApps Handheld Shell`, so the guard is live rather than
+  decorative.
+
+### Failure 1 — `android-actions/setup-android@v3` kills the job in 21s
+
+```
+[command]/usr/local/lib/android/sdk/cmdline-tools/16.0/bin/sdkmanager tools
+Warning: Failed to find package 'tools'
+Error: The process '.../sdkmanager' failed with exit code 1
+```
+
+The action still runs the long-removed `tools` package, so it fails before any of our steps.
+`ubuntu-latest` already ships a complete SDK (`/usr/local/lib/android/sdk`, cmdline-tools 16.0), so the
+action was dropped entirely. The workflow now installs its pinned platform, build tools and NDK with
+`sdkmanager` from that SDK, adds `cmdline-tools/*/bin` to PATH if `sdkmanager` is not already there,
+accepts licences, and asserts both `$NDK_HOME` and `platforms/android-37.0` exist. Removing a
+third-party setup action removed a whole class of failure.
+
+### Failure 2 — every Pages deployment had failed since the initial commit
+
+```
+Liquid syntax error (line 180): Variable '{{ try {{ const val = '{barcode}' was not properly terminated
+```
+
+GitHub Pages builds this branch with Jekyll, and Jekyll was trying to render
+`PRD-PowerApps Mobile Handheld Shell.md`, whose Rust sample contains `{{ ... }}`. The site 404'd.
+Fixed with a root `_config.yml` that excludes that one file. `agents.md`, `history.md` and `todo.md`
+still render as pages, and the root `index.html` is served at the site root (verified: HTTP 200, new
+`<title>`, `agents.html` / `history.html` / `todo.html` all 200).
+
+### Other findings
+
+1. **A cancelled run can block the Rust cache save.**
+   `Failed to save: Unable to reserve cache with key v1-build-apk-Linux-x64-f273623e-95e1c76a, another
+   job may be creating this cache.` The previous run for the same lockfile was cancelled by
+   `concurrency` mid-build and its reservation was still held. Harmless (the next run rebuilds cold)
+   and self-healing, but it is why there was no cache to restore here.
+2. **Action majors matter now.** `actions/checkout@v4`, `setup-node@v4`, `setup-java@v4` and
+   `upload-artifact@v4` run on Node 20, which the runner forces onto Node 24 with a deprecation
+   warning; `setup-java@v4` is itself deprecated. Bumped to `checkout@v7`, `setup-node@v7`,
+   `setup-java@v6`, `upload-artifact@v7` — all four ran clean in the green job.
+3. **Pushing a docs commit cancels the in-flight build** because of `concurrency: cancel-in-progress`.
+   Expected, and worth knowing before a long build is thrown away mid-flight.
+4. **`platforms;android-37.0` is correct and `platforms;android-37` is not.** Confirmed again in CI:
+   the pinned install succeeded and the assertion on `platforms/android-37.0` passed.
+
 ## 2026-10-26 — Emulator playtest: the whole scan path, on a real Android image
 
 **Status:** a debug x86_64 APK booted on an Android 16 (API 36) emulator and every requirement that

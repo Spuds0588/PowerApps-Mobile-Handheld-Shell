@@ -50,8 +50,12 @@ recorded in `history.md`. Anything that needs rugged hardware stays unchecked on
       Rust and Tauri CLI, Rust cache with a successful-builds-only key.
 - [x] A `Verify APK` step that fails the job on a bad signature or a missing library, receiver, or
       embedded config.
-- [x] First real run green, log read, artifact downloaded and inspected.
-- [x] Cold and warm timings recorded in `history.md`.
+- [x] First real run green (`40336020894`, commit `924bc3f`), logs read, artifact downloaded and
+      inspected: 11,527,470 bytes, signed with the committed key, both ARM libraries, receiver present,
+      config compiled in.
+- [x] Cold timings recorded in `history.md`: 5m54s job, 318.7s build step.
+- [x] Two CI failures found and fixed rather than worked around: `setup-android@v3` running the removed
+      `sdkmanager tools`, and Jekyll failing the Pages build on Liquid in the PRD.
 
 ## Phase 6 — Front door and README
 
