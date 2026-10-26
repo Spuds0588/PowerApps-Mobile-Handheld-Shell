@@ -307,11 +307,9 @@ button.primary { background: linear-gradient(135deg, #2f6fed, #5964a6); border-c
 
     function set(id, value) { document.getElementById(id).textContent = value; }
 
-    function activeField() {
-        var el = document.activeElement;
-        if (!el || (el.tagName !== "INPUT" && el.tagName !== "TEXTAREA")) return null;
-        return names[el.id] || el.id || "field";
-    }
+    // The shell writes the value, then fires input/change. The target of the most
+    // recent of those is the field that received it, whether or not it still has focus.
+    var lastWritten = null;
 
     ["f-bin", "f-item", "f-qty"].forEach(function (id) {
         var input = document.getElementById(id);
@@ -322,6 +320,7 @@ button.primary { background: linear-gradient(135deg, #2f6fed, #5964a6); border-c
         input.addEventListener("click", note);
         ["input", "change"].forEach(function (type) {
             input.addEventListener(type, function (event) {
+                lastWritten = id;
                 line("ev", type.padEnd(7, " ") + names[id] + "  \"" + event.target.value + "\"");
                 clock.textContent = "last event " + stamp();
             });
@@ -331,17 +330,18 @@ button.primary { background: linear-gradient(135deg, #2f6fed, #5964a6); border-c
     // The shell dispatches this after it writes the value and fires input/change.
     window.addEventListener("barcodeScanned", function (event) {
         var value = event.detail == null ? "" : String(event.detail);
-        var field = activeField();
+        var field = lastWritten ? names[lastWritten] : null;
+        lastWritten = null;
         scans += 1;
         set("last-value", value || "(empty)");
         set("last-meta", field
             ? "Landed in \u201c" + field + "\u201d at " + new Date().toLocaleTimeString()
-            : "No field was focused, so the shell kept it in the hook only.");
+            : "No field to write, so the shell kept it in the hook only.");
         set("f-count", String(scans));
         set("f-length", String(value.length));
         set("f-field", field || "none");
         set("f-hook", value ? "set" : "empty");
-        set("focus-line", field ? "Last scan landed in " + field + "." : "No field had the cursor, so the value went to the hook.");
+        set("focus-line", field ? "Last scan landed in " + field + "." : "No field to write, so the value is in window.__LAST_BARCODE__.");
         line("ok", "event   barcodeScanned  \"" + value + "\"");
         clock.textContent = "last scan " + stamp();
     });
