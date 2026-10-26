@@ -1,0 +1,11 @@
+# Rust build output and generated schemas. The Android Studio project under
+# src-tauri/gen/android/ IS committed - it carries the scanner receiver, the
+# kiosk activity and the dev signing key. Its own .gitignore files cover its
+# build products.
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# Local logs and OS noise
+*.log
+.DS_Store
+__pycache__/

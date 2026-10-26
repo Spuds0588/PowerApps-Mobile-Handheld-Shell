@@ -1,0 +1,20 @@
+{
+  "appName": "PowerApps Handheld Shell",
+  "powerAppUrl": "https://apps.powerapps.com/play/e/default-tenant/a/app-id?tenantId=your-tenant-id",
+  "keepScreenOn": true,
+  "interceptBackButton": true,
+  "scanner": {
+    "intentAction": "com.powerapps.handheld.SCAN",
+    "intentExtraKey": "com.symbol.datawedge.data_string"
+  },
+  "allowedDomains": [
+    "apps.powerapps.com",
+    "content.powerapps.com",
+    "login.microsoftonline.com",
+    "login.windows.net",
+    "aadcdn.msauth.net",
+    "aadcdn.msftauth.net",
+    "msft.sts.microsoft.com",
+    "autologon.microsoftazuread-sso.com"
+  ]
+}

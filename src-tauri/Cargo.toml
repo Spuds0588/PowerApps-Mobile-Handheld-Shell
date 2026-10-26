@@ -1,0 +1,32 @@
+[package]
+name = "powerapps-mobile-handheld-shell"
+version = "1.0.0"
+description = "Hardened, fast, low-memory PowerApps shell for enterprise Android handhelds"
+authors = ["Enterprise Mobility Operations"]
+edition = "2021"
+
+[lib]
+name = "powerapps_mobile_handheld_shell"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+url = "2.5"
+
+# The scanner bridge is the one place Kotlin has to call Rust. JNI is Tauri's
+# documented mechanism for that, and Tauri already links jni 0.21 on Android, so
+# this pins an existing transitive dependency instead of adding a new one.
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.21"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+url = "2.5"
+
+[profile.release]
+# Handheld storage is tight; strip debug symbols out of the shipped library.
+strip = true

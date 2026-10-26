@@ -1,0 +1,115 @@
+name: Build Handheld PowerApps APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Pinned so a runner image change cannot silently move the build.
+  NDK_VERSION: 27.3.13750724
+  ANDROID_PLATFORM: platforms;android-37.0
+  ANDROID_BUILD_TOOLS: build-tools;37.0.0
+  RUST_TOOLCHAIN: 1.95.0
+  TAURI_CLI: 2.12.4
+
+jobs:
+  build-apk:
+    name: Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform, build tools and NDK
+        run: |
+          sdkmanager --install "$ANDROID_PLATFORM" "$ANDROID_BUILD_TOOLS" "ndk;$NDK_VERSION" "platform-tools"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+          test -d "$ANDROID_HOME/ndk/$NDK_VERSION"
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          targets: aarch64-linux-android,armv7-linux-androideabi
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          # Only successful builds write this key; bump to invalidate.
+          prefix-key: v1
+
+      - name: Install Tauri CLI
+        run: npm install --global @tauri-apps/cli@${{ env.TAURI_CLI }}
+
+      - name: Verify toolchain
+        run: |
+          java -version
+          rustc --version
+          tauri --version
+          echo "NDK_HOME=$NDK_HOME"
+
+      - name: Build release APK
+        run: tauri android build --apk --target aarch64 --target armv7 --ci
+
+      - name: Verify APK
+        run: |
+          set -euo pipefail
+          BT="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
+          APK="$(ls src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk)"
+          echo "APK: $APK"
+          echo "Size: $(stat -c%s "$APK") bytes"
+          test "$(stat -c%s "$APK")" -gt 2000000
+
+          echo "--- signature ---"
+          "$BT/apksigner" verify --verbose "$APK"
+
+          echo "--- badging ---"
+          "$BT/aapt2" dump badging "$APK" | grep -E "^package:|^application-label:|^sdkVersion:|^targetSdkVersion:"
+
+          echo "--- packaged payloads ---"
+          unzip -l "$APK" | grep -E "classes.dex|AndroidManifest.xml|lib/arm64-v8a/|lib/armeabi-v7a/"
+          unzip -l "$APK" | grep -q "lib/arm64-v8a/libpowerapps_mobile_handheld_shell.so"
+          unzip -l "$APK" | grep -q "lib/armeabi-v7a/libpowerapps_mobile_handheld_shell.so"
+
+          echo "--- config.json baked into the manifest ---"
+          "$BT/aapt2" dump xmltree --file AndroidManifest.xml "$APK" | grep -A2 "BarcodeReceiver"
+
+          echo "--- the maker's config.json baked into the native library ---"
+          unzip -p "$APK" lib/arm64-v8a/libpowerapps_mobile_handheld_shell.so > /tmp/libshell.so
+          APP_NAME="$(python3 -c "import json;print(json.load(open('config.json'))['appName'])")"
+          POWER_APP_URL="$(python3 -c "import json;print(json.load(open('config.json'))['powerAppUrl'])")"
+          strings -a /tmp/libshell.so | grep -F "$POWER_APP_URL" > /dev/null
+          strings -a /tmp/libshell.so | grep -F "$APP_NAME" > /dev/null
+          echo "Embedded config found in libshell.so: $APP_NAME"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PowerApps-Handheld-Release-APK
+          path: src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
+          if-no-files-found: error
+          retention-days: 90
