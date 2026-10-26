@@ -79,7 +79,19 @@ recorded in `history.md`. Anything that needs rugged hardware stays unchecked on
 - [x] `README.md`: quickstart, config reference, scan path, artifact locations, verify commands.
 - [x] Pages rebuilt and the live URL checked.
 
-## Phase 7 — Needs a physical handheld (cannot be done on this host)
+## Phase 7 — Demo profile and config builder
+
+- [ ] `demo.html`: stand-in Power App with three inputs, a last-value panel, field and length facts, the
+      `input` / `change` / `barcodeScanned` trail, and a simulate button for desktop visitors.
+- [ ] `wizard.html`: four steps, per-step validation, prefilled Microsoft sign-in hosts, copy and
+      download, checked at 1280 px and 390 px.
+- [ ] `config.demo.json` plus a `config=demo` dispatch that publishes `demo-latest` as a pre-release and
+      never creates a version tag.
+- [ ] Demo APK installed on the emulator, demo page loaded over Pages, a broadcast scan landing in the
+      focused field with the diagnostics panel confirming the string.
+- [ ] Test releases `v1.0.0` and `v1.0.1` and their tags removed, demo release in their place.
+
+## Phase 8 — Needs a physical handheld (cannot be done on this host)
 
 - [ ] Sideload the release APK on a Zebra TC21/TC52 or Honeywell CT40/CT60 and confirm it boots.
 - [ ] Configure DataWedge Intent output (action, broadcast delivery, no category) and confirm a real
@@ -94,6 +106,9 @@ recorded in `history.md`. Anything that needs rugged hardware stays unchecked on
 
 - Every green `main` build cuts a release immediately; there is no draft or approval step, and the
   version is stamped in CI rather than committed back to the repository.
+- The demo APK points at this repository's Pages demo page, not at a copy's. A copy that dispatches a
+  demo build gets an APK for the upstream demo until it edits `config.demo.json`.
+- The demo release is a rolling pre-release with no version history; only the newest demo APK is kept.
 
 - The front door's device is a CSS illustration, not a product screenshot, and the demo is a
   simulation of the DOM write rather than a live Power Apps control.

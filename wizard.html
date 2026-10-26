@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Config builder — PowerApps Handheld Shell</title>
+<meta name="description" content="Answer four questions and download the config.json that turns the PowerApps Handheld Shell template into your own Power App APK.">
+<meta name="theme-color" content="#0b0f19">
+<link rel="icon" type="image/png" href="src-tauri/icons/32x32.png">
+<style>
+:root {
+    --bg: #0b0f19;
+    --panel: #131929;
+    --panel-2: #0d1322;
+    --border: #222d4a;
+    --ink: #e2e8f0;
+    --muted: #94a3b8;
+    --faint: #64748b;
+    --accent: #38bdf8;
+    --code: #7dd3fc;
+    --purple: #742774;
+    --green: #34d399;
+    --amber: #f5c542;
+    --red: #f87171;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:
+        radial-gradient(ellipse 70% 40% at 10% 0%, rgba(56,189,248,.10), transparent 60%),
+        radial-gradient(ellipse 60% 35% at 90% 4%, rgba(116,39,116,.13), transparent 60%),
+        var(--bg);
+    color: var(--ink);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 26px 18px 48px; }
+a { color: var(--code); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .88em; background: rgba(255,255,255,.06); border-radius: 5px; padding: 1px 5px; color: var(--code); }
+pre code { background: none; padding: 0; }
+
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 26px; }
+.top a { font-size: 13px; color: var(--muted); }
+.top button {
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 11px;
+    cursor: pointer;
+}
+.top button:hover { color: var(--ink); border-color: #33415e; }
+
+.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 1.1px; text-transform: uppercase; color: var(--accent); }
+h1 { font-size: clamp(29px, 5vw, 38px); letter-spacing: -.025em; line-height: 1.15; margin: 8px 0 10px; }
+.lead { color: var(--muted); font-size: 15px; max-width: 62ch; }
+
+.steps { display: flex; flex-wrap: wrap; gap: 6px 14px; list-style: none; margin: 22px 0 18px; padding: 0; }
+.steps li { font-size: 12px; color: var(--faint); display: flex; align-items: center; gap: 6px; }
+.steps li b {
+    display: inline-grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--faint);
+}
+.steps li.done b { border-color: rgba(56,189,248,.4); color: var(--accent); background: rgba(56,189,248,.08); }
+.steps li[aria-current] { color: var(--ink); }
+.steps li[aria-current] b { border-color: var(--accent); color: #04121f; background: var(--accent); }
+
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+.panel[hidden] { display: none; }
+.panel h2 { font-size: 18px; letter-spacing: -.01em; margin-bottom: 4px; }
+.panel .sub { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+
+.field { margin-bottom: 16px; }
+.field label { display: block; font-size: 12.5px; font-weight: 650; margin-bottom: 5px; }
+.field .help { font-size: 11.5px; color: var(--faint); margin-top: 5px; }
+.field input[type="text"], .field input[type="url"], .field textarea {
+    width: 100%;
+    font: inherit;
+    font-size: 14px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: var(--ink);
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 11px;
+}
+.field input:focus, .field textarea:focus { border-color: var(--accent); }
+.field textarea { min-height: 132px; resize: vertical; line-height: 1.7; }
+.field input[aria-invalid="true"], .field textarea[aria-invalid="true"] { border-color: var(--red); }
+
+.check { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 14px; font-size: 13.5px; }
+.check input { margin-top: 4px; accent-color: var(--accent); width: 16px; height: 16px; }
+.check span small { display: block; color: var(--faint); font-size: 11.5px; }
+
+.note { border: 1px solid var(--border); background: rgba(255,255,255,.025); border-radius: 10px; padding: 11px 13px; font-size: 12.5px; color: var(--muted); margin: 16px 0 0; }
+.note strong { color: var(--ink); }
+.note.warn { border-color: rgba(245,197,66,.35); background: rgba(245,197,66,.07); color: #f8e7b0; }
+.error { color: var(--red); font-size: 12.5px; margin-top: 6px; min-height: 18px; }
+
+.nav { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 18px; }
+.btn {
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 650;
+    color: var(--ink);
+    background: rgba(255,255,255,.05);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 9px 16px;
+    cursor: pointer;
+}
+.btn:hover { background: rgba(255,255,255,.09); }
+.btn.primary { background: linear-gradient(135deg, #2f6fed, #5964a6); border-color: transparent; color: #fff; }
+.btn[disabled] { opacity: .45; cursor: default; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+
+pre.json {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.65;
+    background: #080c15;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    overflow: auto;
+    max-height: 430px;
+    color: #d7e3f4;
+    white-space: pre;
+}
+.next { margin-top: 18px; font-size: 13px; color: var(--muted); }
+.next ol { margin: 8px 0 0 20px; }
+.next li { margin-bottom: 6px; }
+.next strong { color: var(--ink); }
+footer { margin-top: 22px; font-size: 12px; color: var(--faint); }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <div class="top">
+        <a href="./index.html">&larr; PowerApps Handheld Shell</a>
+        <button type="button" id="restart">Start over</button>
+    </div>
+
+    <p class="eyebrow">Config builder</p>
+    <h1>Build your <code>config.json</code></h1>
+    <p class="lead">Four questions, one file. It is generated in this tab and never leaves it. Drop the file at
+        the root of your template copy and the next push builds your APK.</p>
+
+    <ol class="steps" id="steps">
+        <li data-step="1"><b>1</b> App</li>
+        <li data-step="2"><b>2</b> Device</li>
+        <li data-step="3"><b>3</b> Domains</li>
+        <li data-step="4"><b>4</b> Config</li>
+    </ol>
+
+    <form id="form" novalidate>
+        <section class="panel" data-step="1">
+            <h2>Which app is this?</h2>
+            <p class="sub">The name goes on the launcher, the task switcher and the splash. The URL is what
+                opens on launch.</p>
+
+            <div class="field">
+                <label for="appName">App name</label>
+                <input type="text" id="appName" placeholder="Contoso Pick &amp; Pack" autocomplete="off" spellcheck="false">
+                <p class="help">Shown under the icon on the device. Keep it short.</p>
+            </div>
+
+            <div class="field">
+                <label for="powerAppUrl">Power App link</label>
+                <input type="url" id="powerAppUrl" placeholder="https://apps.powerapps.com/play/e/.../a/...?tenantId=..." autocomplete="off" spellcheck="false">
+                <p class="help">From <strong>Power Apps &rarr; Share</strong>, or the address bar while the app is
+                    running. It must be the <code>/play/</code> link, not the editor.</p>
+            </div>
+
+            <p class="note"><strong>Test the link first.</strong> Open it in a private browser window. If it asks
+                for a sign-in you can complete, the shell will too, as long as every host it reaches is in the
+                next step.</p>
+            <div class="error" id="err-1" role="status" aria-live="polite"></div>
+        </section>
+
+        <section class="panel" data-step="2" hidden>
+            <h2>How should the device behave?</h2>
+            <p class="sub">These map to Android activity flags, not to anything the operator can change.</p>
+
+            <label class="check"><input type="checkbox" id="keepScreenOn" checked>
+                <span>Keep the screen on<small>Stops the display sleeping mid-shift.</small></span></label>
+            <label class="check"><input type="checkbox" id="interceptBackButton" checked>
+                <span>Swallow the Back button<small>Nobody backs out of the app by accident.</small></span></label>
+
+            <div class="field">
+                <label for="intentAction">Scan intent action</label>
+                <input type="text" id="intentAction" value="com.powerapps.handheld.SCAN" autocomplete="off" spellcheck="false">
+                <p class="help">The scan tool must broadcast this exact string. Set the same value in DataWedge.</p>
+            </div>
+
+            <div class="field">
+                <label for="intentExtraKey">Barcode extra key</label>
+                <input type="text" id="intentExtraKey" value="com.symbol.datawedge.data_string" autocomplete="off" spellcheck="false">
+                <p class="help">Zebra's key is the default. The receiver also falls back to <code>data</code> and
+                    <code>version_1_data</code>, so Honeywell and Datalogic usually work unchanged.</p>
+            </div>
+
+            <p class="note"><strong>Keyboard-wedge mode is not used.</strong> The shell reads a broadcast intent,
+                which is why held keys, dropped characters and focus jumps do not happen.</p>
+            <div class="error" id="err-2" role="status" aria-live="polite"></div>
+        </section>
+
+        <section class="panel" data-step="3" hidden>
+            <h2>What may the app reach?</h2>
+            <p class="sub">One host per line. Subdomains are included automatically. Everything else is blocked
+                and logged as <code>[SECURITY][BLOCKED]</code>.</p>
+
+            <div class="field">
+                <label for="allowedDomains">Allowed domains</label>
+                <textarea id="allowedDomains" spellcheck="false">apps.powerapps.com
+content.powerapps.com
+login.microsoftonline.com
+login.microsoft.com
+login.windows.net
+secure.aadcdn.microsoftonline-p.com
+aadcdn.msauth.net
+aadcdn.msftauth.net
+msft.sts.microsoft.com
+autologon.microsoftazuread-sso.com</textarea>
+                <p class="help">Paste the scheme or a full URL and it is reduced to the host. Add every host your
+                    app or its sign-in flow visits.</p>
+            </div>
+
+            <p class="note"><strong>The shipped list is Microsoft's minimum, not a promise.</strong> Personal
+                Microsoft accounts sign in through <code>login.live.com</code>, and some tenants pull assets from
+                <code>azureedge.net</code>, <code>azurefd.net</code>, <code>graph.microsoft.com</code> or
+                <code>azure-apim.net</code>. A blocked host shows up in logcat, not as a crash.</p>
+            <div class="error" id="err-3" role="status" aria-live="polite"></div>
+        </section>
+
+        <section class="panel" data-step="4" hidden>
+            <h2>Your <code>config.json</code></h2>
+            <p class="sub">This is the whole file. Copy it, or download it and replace the one in your repository.</p>
+            <pre class="json" id="output" aria-live="polite"></pre>
+            <div class="actions">
+                <button type="button" class="btn primary" id="copy">Copy JSON</button>
+                <button type="button" class="btn" id="download">Download config.json</button>
+            </div>
+            <div class="next">
+                <strong>Then:</strong>
+                <ol>
+                    <li>Replace <code>config.json</code> in your copy of the template with this file.</li>
+                    <li>Commit and push. The push starts the build.</li>
+                    <li>Download the APK from the newest release and sideload it.</li>
+                    <li>Set the same intent action in your scan tool, then pull the trigger in the app.</li>
+                </ol>
+            </div>
+            <p class="note">Want to see it work before configuring anything? Install the
+                <a href="https://github.com/Spuds0588/PowerApps-Mobile-Handheld-Shell/releases/tag/demo-latest">demo APK</a>
+                and open the <a href="./demo.html">demo page</a> it loads.</p>
+            <div class="error" id="err-4" role="status" aria-live="polite"></div>
+        </section>
+    </form>
+
+    <div class="nav">
+        <button type="button" class="btn" id="back" disabled>Back</button>
+        <button type="button" class="btn primary" id="next">Next</button>
+    </div>
+
+    <footer>Nothing is uploaded, stored or logged. The builder only formats the file the template already reads.</footer>
+</div>
+
+<script>
+(function () {
+    var current = 1;
+    var total = 4;
+
+    var form = document.getElementById("form");
+    var panels = form.querySelectorAll(".panel");
+    var stepList = document.querySelectorAll("#steps li");
+    var back = document.getElementById("back");
+    var next = document.getElementById("next");
+    var output = document.getElementById("output");
+
+    var fields = {
+        appName: document.getElementById("appName"),
+        powerAppUrl: document.getElementById("powerAppUrl"),
+        keepScreenOn: document.getElementById("keepScreenOn"),
+        interceptBackButton: document.getElementById("interceptBackButton"),
+        intentAction: document.getElementById("intentAction"),
+        intentExtraKey: document.getElementById("intentExtraKey"),
+        allowedDomains: document.getElementById("allowedDomains")
+    };
+
+    function clearErrors() {
+        for (var i = 1; i <= total; i += 1) { document.getElementById("err-" + i).textContent = ""; }
+        form.querySelectorAll("[aria-invalid]").forEach(function (el) { el.removeAttribute("aria-invalid"); });
+    }
+
+    function bad(field, step, message) {
+        field.setAttribute("aria-invalid", "true");
+        document.getElementById("err-" + step).textContent = message;
+        return false;
+    }
+
+    function hosts() {
+        var seen = {};
+        return fields.allowedDomains.value.split(/[\s,]+/).map(function (line) {
+            return line.trim().toLowerCase()
+                .replace(/^[a-z]+:\/\//, "")
+                .replace(/\/.*$/, "")
+                .replace(/:\d+$/, "");
+        }).filter(function (host) {
+            if (!host || seen[host]) return false;
+            seen[host] = true;
+            return true;
+        });
+    }
+
+    function validate(step) {
+        clearErrors();
+        if (step === 1) {
+            var name = fields.appName.value.trim();
+            if (!name) return bad(fields.appName, 1, "Give the app a name.");
+            if (name.length > 48) return bad(fields.appName, 1, "Keep the name under 48 characters.");
+            var raw = fields.powerAppUrl.value.trim();
+            if (!raw) return bad(fields.powerAppUrl, 1, "Paste the Power App link.");
+            var url;
+            try { url = new URL(raw); } catch (e) { return bad(fields.powerAppUrl, 1, "That is not a full URL. It should start with https://"); }
+            if (url.protocol !== "https:") return bad(fields.powerAppUrl, 1, "Release builds block cleartext, so the link must start with https://");
+            if (url.pathname.indexOf("/play/") === -1) return bad(fields.powerAppUrl, 1, "That looks like the editor link. Use the /play/ link the app runs on.");
+            return true;
+        }
+        if (step === 2) {
+            var action = fields.intentAction.value.trim();
+            if (!/^[A-Za-z][A-Za-z0-9_.]*$/.test(action)) {
+                return bad(fields.intentAction, 2, "Use letters, digits, dots and underscores, starting with a letter.");
+            }
+            var key = fields.intentExtraKey.value.trim();
+            if (!/^[A-Za-z][A-Za-z0-9_.:-]*$/.test(key)) {
+                return bad(fields.intentExtraKey, 2, "An extra key cannot contain spaces or quotes.");
+            }
+            return true;
+        }
+        if (step === 3) {
+            var list = hosts();
+            if (!list.length) return bad(fields.allowedDomains, 3, "Add at least one host, or every page is blocked.");
+            var badHost = list.filter(function (host) { return !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(host); });
+            if (badHost.length) return bad(fields.allowedDomains, 3, "Not a host: " + badHost[0]);
+            return true;
+        }
+        return true;
+    }
+
+    function config() {
+        return {
+            appName: fields.appName.value.trim(),
+            powerAppUrl: fields.powerAppUrl.value.trim(),
+            keepScreenOn: fields.keepScreenOn.checked,
+            interceptBackButton: fields.interceptBackButton.checked,
+            scanner: {
+                intentAction: fields.intentAction.value.trim(),
+                intentExtraKey: fields.intentExtraKey.value.trim()
+            },
+            allowedDomains: hosts()
+        };
+    }
+
+    function show(step) {
+        current = step;
+        panels.forEach(function (panel) {
+            panel.hidden = Number(panel.dataset.step) !== step;
+        });
+        stepList.forEach(function (item) {
+            var n = Number(item.dataset.step);
+            item.classList.toggle("done", n < step);
+            if (n === step) { item.setAttribute("aria-current", "step"); } else { item.removeAttribute("aria-current"); }
+        });
+        back.disabled = step === 1;
+        next.hidden = step === total;
+        if (step === total) {
+            output.textContent = JSON.stringify(config(), null, 2) + "\n";
+        }
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    next.addEventListener("click", function () {
+        if (!validate(current)) return;
+        if (current < total) show(current + 1);
+    });
+
+    back.addEventListener("click", function () {
+        clearErrors();
+        if (current > 1) show(current - 1);
+    });
+
+    form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        next.click();
+    });
+
+    form.addEventListener("keydown", function (event) {
+        if (event.key === "Enter" && event.target.tagName !== "TEXTAREA") {
+            event.preventDefault();
+            next.click();
+        }
+    });
+
+    document.getElementById("copy").addEventListener("click", function () {
+        var button = this;
+        var text = output.textContent;
+        var done = function (ok) {
+            if (!ok) {
+                var range = document.createRange();
+                range.selectNodeContents(output);
+                var selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+            button.textContent = ok ? "Copied" : "Selected, copy it";
+            setTimeout(function () { button.textContent = "Copy JSON"; }, 2400);
+        };
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); });
+        } else {
+            done(false);
+        }
+    });
+
+    document.getElementById("download").addEventListener("click", function () {
+        var blob = new Blob([output.textContent], { type: "application/json" });
+        var link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "config.json";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(function () { URL.revokeObjectURL(link.href); }, 1000);
+    });
+
+    document.getElementById("restart").addEventListener("click", function () {
+        clearErrors();
+        fields.appName.value = "";
+        fields.powerAppUrl.value = "";
+        fields.keepScreenOn.checked = true;
+        fields.interceptBackButton.checked = true;
+        fields.intentAction.value = "com.powerapps.handheld.SCAN";
+        fields.intentExtraKey.value = "com.symbol.datawedge.data_string";
+        fields.allowedDomains.value = [
+            "apps.powerapps.com", "content.powerapps.com", "login.microsoftonline.com",
+            "login.microsoft.com", "login.windows.net", "secure.aadcdn.microsoftonline-p.com",
+            "aadcdn.msauth.net", "aadcdn.msftauth.net", "msft.sts.microsoft.com",
+            "autologon.microsoftazuread-sso.com"
+        ].join("\n");
+        show(1);
+    });
+
+    show(1);
+})();
+</script>
+</body>
+</html>

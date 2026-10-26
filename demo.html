@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo pick list — PowerApps Handheld Shell</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0b0f19">
+<link rel="icon" type="image/png" href="src-tauri/icons/32x32.png">
+<style>
+:root {
+    --bg: #0b0f19;
+    --panel: #131929;
+    --panel-2: #0d1322;
+    --border: #222d4a;
+    --ink: #e2e8f0;
+    --muted: #94a3b8;
+    --faint: #64748b;
+    --accent: #38bdf8;
+    --code: #7dd3fc;
+    --purple: #742774;
+    --green: #34d399;
+    --amber: #f5c542;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:
+        radial-gradient(ellipse 70% 40% at 10% 0%, rgba(56,189,248,.10), transparent 60%),
+        radial-gradient(ellipse 60% 35% at 90% 4%, rgba(116,39,116,.13), transparent 60%),
+        var(--bg);
+    color: var(--ink);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1120px; margin: 0 auto; padding: 26px 18px 34px; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9em; background: rgba(255,255,255,.06); border-radius: 5px; padding: 1px 5px; color: var(--code); }
+a { color: var(--code); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 18px; }
+.top h1 { font-size: 19px; letter-spacing: -.01em; }
+.top .badge {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid rgba(56,189,248,.35);
+    background: rgba(56,189,248,.08);
+    border-radius: 999px;
+    padding: 4px 10px;
+}
+.top p { width: 100%; font-size: 13px; color: var(--muted); }
+
+.grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+@media (min-width: 900px) { .grid { grid-template-columns: minmax(0, 440px) minmax(0, 1fr); align-items: start; } }
+
+/* The stand-in app */
+.app { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.app-bar {
+    background: linear-gradient(90deg, var(--purple), #4b1a4b);
+    padding: 12px 16px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+.app-bar strong { font-size: 15px; }
+.app-bar span { font-size: 11px; color: #e9d5ff; letter-spacing: .04em; }
+.app-body { padding: 16px; }
+.field { display: block; margin-bottom: 12px; }
+.field span { display: block; font-size: 11.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.field input {
+    width: 100%;
+    font: inherit;
+    font-size: 17px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: #0b1020;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+.field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(56,189,248,.25); }
+.hint { margin-top: 14px; font-size: 12.5px; color: var(--muted); border-top: 1px dashed var(--border); padding-top: 12px; }
+.hint b { color: var(--ink); }
+.footer-line { margin-top: 10px; font-size: 11.5px; color: var(--faint); }
+
+/* Diagnostics */
+.diag { background: var(--panel-2); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+.diag-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.diag-head h2 { font-size: 15px; }
+.diag-head span { font-size: 11.5px; color: var(--faint); }
+.last {
+    background: rgba(56,189,248,.06);
+    border: 1px solid rgba(56,189,248,.3);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+}
+.last span { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); }
+.last strong {
+    display: block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: clamp(20px, 4.2vw, 28px);
+    font-weight: 600;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+    line-height: 1.25;
+    margin-top: 2px;
+}
+.last small { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.fact { background: rgba(255,255,255,.025); border: 1px solid var(--border); border-radius: 9px; padding: 8px 10px; }
+.fact span { display: block; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.fact b { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.log-title { display: flex; justify-content: space-between; align-items: center; margin: 10px 0 6px; gap: 10px; }
+.log-title span { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.log-title span:last-child { font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--faint); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.log {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    line-height: 1.7;
+    background: #080c15;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 10px 12px;
+    min-height: 96px;
+    max-height: 190px;
+    overflow: auto;
+    color: var(--muted);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.log .t { color: var(--faint); }
+.log .ok { color: var(--green); }
+.log .ev { color: var(--accent); }
+.log .bad { color: var(--amber); }
+.diag-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+button {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 650;
+    color: var(--ink);
+    background: rgba(255,255,255,.05);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 13px;
+    cursor: pointer;
+}
+button:hover { background: rgba(255,255,255,.09); }
+button.primary { background: linear-gradient(135deg, #2f6fed, #5964a6); border-color: transparent; color: #fff; }
+.strip { margin-top: 16px; font-size: 12px; color: var(--faint); }
+.strip strong { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <header class="top">
+        <h1>Pick list</h1>
+        <span class="badge">Template demo</span>
+        <p>This page stands in for a Power App. The demo APK loads it, and the panel below reports what
+            reached the page when you pulled the trigger.</p>
+    </header>
+
+    <div class="grid">
+        <section class="app" aria-label="Stand-in Power App">
+            <div class="app-bar"><strong>Pick list</strong><span>POWER APPS</span></div>
+            <div class="app-body">
+                <label class="field"><span>Bin</span><input id="f-bin" value="A-04-12" autocomplete="off" spellcheck="false"></label>
+                <label class="field"><span>Item</span><input id="f-item" placeholder="scan item" autocomplete="off" spellcheck="false"></label>
+                <label class="field"><span>Quantity</span><input id="f-qty" value="1" inputmode="numeric" autocomplete="off" spellcheck="false"></label>
+                <p class="hint">Tap a field, then pull the <b>trigger</b>. The scan lands in the field you touched
+                    last, without reloading this page.</p>
+                <p class="footer-line" id="focus-line">Tap a field first. The scan lands in the field with the cursor.</p>
+            </div>
+        </section>
+
+        <section class="diag" aria-label="Scanner diagnostics">
+            <div class="diag-head">
+                <h2>Scanner passthrough</h2>
+                <span>Updating live</span>
+            </div>
+            <div class="last">
+                <span>Last value received</span>
+                <strong id="last-value">&mdash;</strong>
+                <small id="last-meta">Nothing yet. Focus a field and scan.</small>
+            </div>
+            <div class="facts">
+                <div class="fact"><span>Scans</span><b id="f-count">0</b></div>
+                <div class="fact"><span>Length</span><b id="f-length">&mdash;</b></div>
+                <div class="fact"><span>Field</span><b id="f-field">&mdash;</b></div>
+                <div class="fact"><span>Hook</span><b id="f-hook">&mdash;</b></div>
+            </div>
+            <div class="log-title"><span>Event trail</span><span id="clock">&mdash;</span></div>
+            <div class="log" id="log">waiting for the first event</div>
+            <div class="diag-actions">
+                <button type="button" class="primary" id="simulate">Simulate a scan</button>
+                <button type="button" id="copy">Copy report</button>
+            </div>
+            <p class="strip"><strong>Not part of the shell.</strong> This panel belongs to the demo page. Replace
+                <code>powerAppUrl</code> in <code>config.json</code> with your own app and it is gone.</p>
+        </section>
+    </div>
+</div>
+
+<script>
+(function () {
+    var samples = ["00012345678905", "MAT-4417-B", "PLT-0093-22", "8901234567897"];
+    var next = 0;
+    var scans = 0;
+    var events = [];
+    var started = Date.now();
+
+    var item = document.getElementById("f-item");
+    var log = document.getElementById("log");
+    var clock = document.getElementById("clock");
+    var empty = true;
+
+    var names = { "f-bin": "bin", "f-item": "item", "f-qty": "qty" };
+
+    function stamp() {
+        var d = new Date();
+        return [d.getHours(), d.getMinutes(), d.getSeconds()].map(function (n) {
+            return String(n).padStart(2, "0");
+        }).join(":") + "." + String(d.getMilliseconds()).padStart(3, "0");
+    }
+
+    function line(kind, text) {
+        if (empty) { log.textContent = ""; empty = false; }
+        var row = document.createElement("div");
+        var t = document.createElement("span");
+        t.className = "t";
+        t.textContent = stamp();
+        var k = document.createElement("span");
+        k.className = kind;
+        k.textContent = kind.padEnd(6, " ");
+        row.append(t, "  ", k, " ", text);
+        log.appendChild(row);
+        while (log.children.length > 14) { log.removeChild(log.firstChild); }
+        log.scrollTop = log.scrollHeight;
+    }
+
+    function set(id, value) { document.getElementById(id).textContent = value; }
+
+    function activeField() {
+        var el = document.activeElement;
+        if (!el || (el.tagName !== "INPUT" && el.tagName !== "TEXTAREA")) return null;
+        return names[el.id] || el.id || "field";
+    }
+
+    ["f-bin", "f-item", "f-qty"].forEach(function (id) {
+        var input = document.getElementById(id);
+        var note = function () {
+            set("focus-line", "Focused: " + names[id] + ". A scan will land here.");
+        };
+        input.addEventListener("focus", note);
+        input.addEventListener("click", note);
+        ["input", "change"].forEach(function (type) {
+            input.addEventListener(type, function (event) {
+                events.push(type);
+                line("ev", type.padEnd(7, " ") + names[id] + "  \"" + event.target.value + "\"");
+                clock.textContent = "last event " + stamp();
+            });
+        });
+    });
+
+    // The shell dispatches this after it writes the value and fires input/change.
+    window.addEventListener("barcodeScanned", function (event) {
+        var value = event.detail == null ? "" : String(event.detail);
+        var field = activeField();
+        scans += 1;
+        set("last-value", value || "(empty)");
+        set("last-meta", field
+            ? "Landed in \u201c" + field + "\u201d at " + new Date().toLocaleTimeString()
+            : "No field was focused, so the shell kept it in the hook only.");
+        set("f-count", String(scans));
+        set("f-length", String(value.length));
+        set("f-field", field || "none");
+        set("f-hook", value ? "set" : "empty");
+        set("focus-line", field ? "Last scan landed in " + field + "." : "No field had the cursor, so the value went to the hook.");
+        line("ok", "event   barcodeScanned  \"" + value + "\"");
+        line("ev", "trail   " + (events.length ? events.join(" \u2192 ") + " \u2192 barcodeScanned" : "barcodeScanned"));
+        events = [];
+        clock.textContent = "last scan " + stamp();
+    });
+
+    item.focus();
+
+    // Visitors without a scanner see the same DOM write the shell performs.
+    document.getElementById("simulate").addEventListener("click", function () {
+        var value = samples[next % samples.length];
+        next += 1;
+        var target = document.activeElement && document.activeElement.tagName === "INPUT"
+            ? document.activeElement
+            : item;
+        target.focus();
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(target, value);
+        target.dispatchEvent(new Event("input", { bubbles: true }));
+        target.dispatchEvent(new Event("change", { bubbles: true }));
+        window.__LAST_BARCODE__ = value;
+        window.dispatchEvent(new CustomEvent("barcodeScanned", { detail: value }));
+    });
+
+    document.getElementById("copy").addEventListener("click", function () {
+        var report = [
+            "PowerApps Handheld Shell demo report",
+            "page: " + location.href,
+            "time: " + new Date().toISOString(),
+            "viewport: " + window.innerWidth + "x" + window.innerHeight + " @ " + (window.devicePixelRatio || 1),
+            "user agent: " + navigator.userAgent,
+            "session: " + Math.round((Date.now() - started) / 1000) + "s, " + scans + " scan(s)",
+            "last value: " + (document.getElementById("last-value").textContent || "(none)"),
+            "last barcode hook: " + (window.__LAST_BARCODE__ || "(unset)"),
+            "",
+            log.innerText
+        ].join("\n");
+        var button = this;
+        var done = function (ok) {
+            button.textContent = ok ? "Copied" : "Clipboard blocked";
+            setTimeout(function () { button.textContent = "Copy report"; }, 1800);
+        };
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(report).then(function () { done(true); }, function () { done(false); });
+        } else {
+            done(false);
+        }
+    });
+})();
+</script>
+</body>
+</html>

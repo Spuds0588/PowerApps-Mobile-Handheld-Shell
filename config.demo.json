@@ -1,0 +1,13 @@
+{
+  "appName": "PowerApps Shell Demo",
+  "powerAppUrl": "https://spuds0588.github.io/PowerApps-Mobile-Handheld-Shell/demo.html",
+  "keepScreenOn": true,
+  "interceptBackButton": true,
+  "scanner": {
+    "intentAction": "com.powerapps.handheld.SCAN",
+    "intentExtraKey": "com.symbol.datawedge.data_string"
+  },
+  "allowedDomains": [
+    "spuds0588.github.io"
+  ]
+}

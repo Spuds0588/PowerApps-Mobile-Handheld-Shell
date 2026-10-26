@@ -13,10 +13,24 @@ numbered release.
 Android 7 and newer, 64-bit and 32-bit ARM. APKs are signed with a public development key, so they
 are for internal sideloading, not for any app store.
 
+## Try the demo first
+
+[Sideload the demo APK](https://github.com/Spuds0588/PowerApps-Mobile-Handheld-Shell/releases/tag/demo-latest)
+to watch the shell work before you configure anything. It is built from `config.demo.json` and opens
+[demo.html](https://spuds0588.github.io/PowerApps-Mobile-Handheld-Shell/demo.html), a stand-in pick list
+with a diagnostics panel: focus a field, pull the trigger, and the page reports the value it received,
+the field it landed in, and the `input` / `change` / `barcodeScanned` trail behind it. With no scanner
+to hand, the page's **Simulate a scan** button performs the same DOM write the shell performs.
+
+The demo release is rebuilt in place with `gh workflow run release.yml -f config=demo`. A demo run
+never creates a version tag, and nothing is published unless it runs on `main`.
+
 ## Use this template
 
 1. Click **Use this template** and create your repository.
 2. Edit `config.json`: `appName`, `powerAppUrl`, `scanner`, `allowedDomains`, and the two kiosk flags.
+   The [config builder](https://spuds0588.github.io/PowerApps-Mobile-Handheld-Shell/wizard.html) writes
+   the file for you if you would rather not edit JSON.
 3. Commit. The push starts **Build and Release Handheld APK**.
    A fresh copy may not run on its initial commit. If no run appears, open
    **Actions → Build and Release Handheld APK → Run workflow**.
@@ -37,6 +51,10 @@ the APK at build time, and the workflow fails if the APK's version and the relea
 run also uploads the APK as the `PowerApps-Handheld-Release-APK` artifact, but artifacts expire and
 releases do not, so use the release. A push that only changes Markdown or the front page cuts no
 release.
+
+The template repository itself keeps only the demo release: its `config.json` is still the
+placeholder, so the workflow skips numbered releases there. A copy has a different repository name,
+so its builds release normally, starting at `v1.0.0`.
 
 ## Agent handoff
 
@@ -89,7 +107,8 @@ No navigation, no reload, no query parameter, so an in-progress form survives a 
 
 ## Where the APK lands
 
-- Published: the newest release on the [Releases](https://github.com/Spuds0588/PowerApps-Mobile-Handheld-Shell/releases) page, as `app-universal-release.apk`.
+- Published: the newest numbered release on the [Releases](https://github.com/Spuds0588/PowerApps-Mobile-Handheld-Shell/releases) page, as `app-universal-release.apk`.
+- Demo: [demo-latest](https://github.com/Spuds0588/PowerApps-Mobile-Handheld-Shell/releases/tag/demo-latest), as `PowerApps-Handheld-Demo.apk`, built from `config.demo.json`.
 - In the run: `src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk`.
 - Downloaded from the run: `app-universal-release.apk` inside the `PowerApps-Handheld-Release-APK`
   artifact, which expires after 90 days.

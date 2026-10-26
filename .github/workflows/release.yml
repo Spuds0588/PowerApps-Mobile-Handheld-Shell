@@ -12,13 +12,22 @@ on:
       - '.nojekyll'
       - 'LICENSE'
   workflow_dispatch:
+    inputs:
+      config:
+        description: "Which profile to build"
+        type: choice
+        options:
+          - production
+          - demo
+        default: production
 
 # Creating the release and its tag is the only write this job needs.
 permissions:
   contents: write
 
 concurrency:
-  group: release-${{ github.ref }}
+  # A demo dispatch must not cancel the production build for the same commit.
+  group: release-${{ github.ref }}-${{ inputs.config || 'production' }}
   cancel-in-progress: true
 
 env:
@@ -42,6 +51,12 @@ jobs:
           # notes. A shallow clone has neither, so it would republish a version
           # that already exists.
           fetch-depth: 0
+
+      # The demo profile is the same code pointed at the template's own demo page.
+      # Every copy keeps config.json untouched; the swap happens in this runner.
+      - name: Use the demo configuration
+        if: inputs.config == 'demo'
+        run: cp config.demo.json config.json
 
       - name: Set up Node
         uses: actions/setup-node@v7
@@ -179,8 +194,15 @@ jobs:
       # Only after the build and every check above have passed, and only from main.
       # A branch run, which is how a maker tests a config without touching their
       # default branch, builds and uploads but publishes nothing.
+      #
+      # The template repository itself publishes no numbered releases: its own
+      # config.json is still the placeholder, so the APK would be useless. Copies
+      # do not match this repository name and release normally.
       - name: Publish release
-        if: github.ref == 'refs/heads/main'
+        if: >-
+          github.ref == 'refs/heads/main'
+          && inputs.config != 'demo'
+          && github.repository != 'Spuds0588/PowerApps-Mobile-Handheld-Shell'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -213,3 +235,39 @@ jobs:
             --generate-notes \
             --target "$GITHUB_SHA"
           echo "Published $(gh release view "v$APP_VERSION" --json url --jq .url)"
+
+      # One rolling pre-release for the demo profile, mirroring the sister
+      # templates. Dispatching with config = demo rebuilds it in place.
+      - name: Publish demo release
+        if: github.ref == 'refs/heads/main' && inputs.config == 'demo'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          APK="$(ls src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk)"
+          cp "$APK" PowerApps-Handheld-Demo.apk
+          NOTES="$(mktemp)"
+          {
+            echo "Prebuilt demo of PowerApps Mobile Handheld Shell. It opens a stand-in pick list on GitHub Pages, not a tenant:"
+            echo
+            echo "https://spuds0588.github.io/PowerApps-Mobile-Handheld-Shell/demo.html"
+            echo
+            echo "The demo profile is \`config.demo.json\`. Install it with:"
+            echo
+            echo '```'
+            echo "adb install -r PowerApps-Handheld-Demo.apk"
+            echo '```'
+            echo
+            echo "Signed with the committed development key, so Android warns on sideload. Built from \`$(git rev-parse --short HEAD)\`, workflow run $GITHUB_RUN_ID."
+          } > "$NOTES"
+          if gh release view demo-latest > /dev/null 2>&1; then
+            gh release upload demo-latest PowerApps-Handheld-Demo.apk --clobber
+            gh release edit demo-latest --title "Handheld demo APK" --notes-file "$NOTES"
+          else
+            gh release create demo-latest PowerApps-Handheld-Demo.apk \
+              --title "Handheld demo APK" \
+              --notes-file "$NOTES" \
+              --prerelease \
+              --target "$GITHUB_SHA"
+          fi
+          echo "Published $(gh release view demo-latest --json url --jq .url)"

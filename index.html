@@ -430,6 +430,7 @@ footer .refs a { color: #7b8ca6; }
         types into the field the operator already has focused, with no reload and no page change.</p>
     <div class="cta-row">
         <a class="btn btn-primary" href="https://github.com/Spuds0588/PowerApps-Mobile-Handheld-Shell/generate">Use this template</a>
+        <a class="btn btn-secondary" href="wizard.html">Build your config</a>
         <a class="btn btn-secondary" href="#flow">See the flow &rarr;</a>
     </div>
     <p class="micro">No Android Studio, no Rust install, no NDK. Edit <code>config.json</code>, push, and
@@ -507,6 +508,33 @@ footer .refs a { color: #7b8ca6; }
     </div>
 </section>
 
+<section aria-labelledby="try-title">
+    <div class="section-head">
+        <div>
+            <span class="eyebrow">Try the build</span>
+            <h2 id="try-title">Install the demo APK</h2>
+        </div>
+        <p>A real build with the demo profile compiled in. It opens a stand-in pick list on GitHub Pages,
+            so it works without a tenant, an account or a configured scan tool.</p>
+    </div>
+    <div class="callout">
+        <p><strong>The same APK the template produces, not a mockup.</strong> The demo profile points the
+            shell at <a href="demo.html">demo.html</a>, a page with three inputs and a diagnostics panel
+            that reports every value the device sends. Sideload it, tap a field, pull the trigger, and watch
+            the string arrive with the event trail that carried it.</p>
+        <p>With no scanner in reach, the page's <strong>Simulate a scan</strong> button performs the same DOM
+            write the shell does. The APK is signed with the committed development key, so Android warns on
+            sideload.</p>
+        <div class="callout-actions">
+            <a class="btn btn-primary" href="https://github.com/Spuds0588/PowerApps-Mobile-Handheld-Shell/releases/tag/demo-latest">Download demo APK</a>
+            <a class="btn btn-secondary" href="demo.html">Open the demo page</a>
+            <a class="btn btn-secondary" href="https://github.com/Spuds0588/PowerApps-Mobile-Handheld-Shell/blob/main/config.demo.json">See the demo config</a>
+        </div>
+        <p class="micro">A demo snapshot, not the production config. Point <code>powerAppUrl</code> at your
+            own app to replace it.</p>
+    </div>
+</section>
+
 <section id="flow" aria-labelledby="flow-title">
     <div class="section-head">
         <div>
@@ -524,7 +552,8 @@ footer .refs a { color: #7b8ca6; }
         <div class="step">
             <span class="n">2</span>
             <h3>Edit <code>config.json</code></h3>
-            <p>Paste the Power App link, name the app, and set the scan action your device sends.</p>
+            <p>Paste the Power App link, name the app, and set the scan action your device sends. The
+                <a href="wizard.html">config builder</a> fills it in for you.</p>
         </div>
         <div class="step">
             <span class="n">3</span>
@@ -575,6 +604,25 @@ footer .refs a { color: #7b8ca6; }
   "allowedDomains": ["apps.powerapps.com", "…"]
 }</code></pre>
             <p class="micro">Bad JSON, a missing key or a malformed URL fails the build instead of shipping.</p>
+        </div>
+    </div>
+</section>
+
+<section aria-labelledby="builder-title">
+    <div class="section-head">
+        <div>
+            <span class="eyebrow">No JSON by hand</span>
+            <h2 id="builder-title">Build your config in the browser</h2>
+        </div>
+        <p>Four questions: the app name, the <code>/play/</code> link, how the device behaves and which
+            domains it may reach. You get a validated <code>config.json</code> to drop into your copy.</p>
+    </div>
+    <div class="callout">
+        <p><strong>It runs in this tab.</strong> Nothing is uploaded, and the file it produces is the same
+            six keys the template reads, with Microsoft's sign-in hosts already in the list.</p>
+        <div class="callout-actions">
+            <a class="btn btn-primary" href="wizard.html">Open the config builder</a>
+            <a class="btn btn-secondary" href="https://github.com/Spuds0588/PowerApps-Mobile-Handheld-Shell/blob/main/config.json">See the shipped config.json</a>
         </div>
     </div>
 </section>

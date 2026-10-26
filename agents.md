@@ -40,7 +40,10 @@ and this contract disagree, fix the code or record the decision in `history.md`.
 | `src-tauri/gen/android/app/dev-release.keystore` | Public development key. Committed on purpose. |
 | `ui/index.html` | Packaged splash asset. Not mounted, because the window opens on the remote URL. |
 | `index.html` | Published front door (GitHub Pages, legacy `main` / root source). |
-| `.github/workflows/release.yml` | Android APK build, artifact verification, version stamping and a numbered GitHub release, on push to `main` and on manual dispatch. |
+| `wizard.html` | Config builder served by Pages. Validates in the tab and emits `config.json`; no build step. |
+| `demo.html` | Stand-in Power App served by Pages. Three inputs plus the scanner passthrough panel. |
+| `config.demo.json` | Demo profile. Points the shell at `demo.html`; copied over `config.json` only in a demo build. |
+| `.github/workflows/release.yml` | Android APK build, artifact verification, version stamping, a numbered GitHub release for copies, and the rolling `demo-latest` release for the demo profile. |
 
 ## Commands
 
@@ -61,8 +64,10 @@ tauri android build --apk --target aarch64 --target armv7 --ci      # what CI bu
 adb install -r src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
 adb shell am broadcast -a com.powerapps.handheld.SCAN \
   --es com.symbol.datawedge.data_string "TEST-123"                  # fake a hardware scan
-python3 -m http.server 8080                                         # inspect the Pages front door
+python3 -m http.server 8899                                         # index.html, wizard.html, demo.html
 gh workflow run release.yml && gh run watch
+gh workflow run release.yml -f config=demo                          # rebuild the demo APK in place
+gh release view demo-latest
 gh run download <run-id> -n PowerApps-Handheld-Release-APK
 gh release list                                                      # v1.0.0, v1.0.1, ...
 gh release download v1.0.1                                           # what a maker actually gets
@@ -95,9 +100,9 @@ gh workflow run release.yml --ref <branch>                           # build a m
    key for anything that leaves the fleet.
 10. **Android only.** No desktop bundle target, no iOS, no macOS. `src-tauri/gen/schemas/` and all
     build output stay git-ignored. Android is called Android in user-facing text.
-11. **Pages stays a single static file.** `index.html` is plain HTML, CSS and one inline script, with
-    no external font, script, image or build step. Do not add a Pages deploy workflow: Pages is
-    already enabled on legacy `main` / root.
+11. **Pages stays static.** `index.html`, `wizard.html` and `demo.html` are plain HTML, CSS and inline
+    script, with no external font, image, script or build step. Do not add a Pages deploy workflow:
+    Pages is already enabled on legacy `main` / root.
 12. **Full files.** When generating or replacing code, write complete runnable files.
 13. **Releases are the delivery.** A green `main` build stamps the next patch version from the newest
     `v*` tag into `tauri.conf.json` and `Cargo.toml`, asserts the APK carries that version, and
@@ -105,6 +110,11 @@ gh workflow run release.yml --ref <branch>                           # build a m
     committed back, because that push would restart the job. Docs-only pushes (`**.md`, `index.html`,
     `.nojekyll`, `LICENSE`) do not build or release. A run from any other ref builds and uploads but
     publishes nothing, which is how a maker tests a config without cutting a version.
+14. **The demo is a profile, not a branch.** `config.demo.json` is copied over `config.json` inside the
+    runner when the workflow is dispatched with `config=demo`; the APK goes to the rolling
+    `demo-latest` pre-release and never gets a version tag. The template repository itself publishes no
+    numbered releases, because its `config.json` is still the placeholder; a copy has a different
+    repository name and releases normally. Keep the demo URL pointed at this repository's Pages.
 
 ## CI discipline (learned the hard way)
 
@@ -122,18 +132,20 @@ producing a working artifact. Therefore:
    the `.0`); `platforms;android-37` does not exist and `sdkmanager` silently finds nothing.
 4. **`NDK_HOME` must point at the versioned NDK directory**, not `$ANDROID_HOME/ndk`. Assert with
    `test -d` in the workflow.
-5. **There is no dependency cache, deliberately.** A cold APK build is five to eight minutes and a maker
+5. **The demo dispatch has its own concurrency group.** `release-<ref>-demo` must not cancel a
+   production build for the same commit, and neither may cancel the other's release.
+6. **There is no dependency cache, deliberately.** A cold APK build is five to eight minutes and a maker
    builds rarely. If you add one, only successful builds may write its key: a cancelled run held a
    `Swatinem/rust-cache` reservation that then refused every later save.
-6. **A copied template may not run on its first commit.** There is no repository-created event, so
+7. **A copied template may not run on its first commit.** There is no repository-created event, so
    `workflow_dispatch` is the guaranteed first run. Say so first in the README.
-7. **Record the numbers.** Job wall time, per-step time, artifact size, and every failure and fix go
+8. **Record the numbers.** Job wall time, per-step time, artifact size, and every failure and fix go
    into `history.md`. Do not paraphrase a guess as a measurement, and never derive a step time by
    subtracting from the job wall — read it from the log.
-8. **Checkout stays `fetch-depth: 0`.** The next version comes from `git tag`, and generated release
+9. **Checkout stays `fetch-depth: 0`.** The next version comes from `git tag`, and generated release
    notes need the previous tag's commit. A shallow clone silently republishes `v1.0.0` and then fails
    on the tag that already exists.
-9. **A re-run must not cut a second release.** The publish step skips when the checked-out commit
+10. **A re-run must not cut a second release.** The publish step skips when the checked-out commit
    already carries a `v*` tag, and it runs last, so a failed verify never leaves a release behind.
    It also needs `contents: write`; the rest of the job needs nothing.
 
@@ -148,6 +160,8 @@ producing a working artifact. Therefore:
 | Workflow | YAML parse, then a dispatched run; read the logs, download the artifact, inspect it |
 | Release or version stamping | Run the extracted stamp block against a scratch repo with no tags and with an old tag, then a branch dispatch and a `main` push; inspect the release page, asset size and `versionName` |
 | `index.html` | Serve locally, exercise the trigger button, check 1280 px and 390 px, no console errors, then check the live Pages URL |
+| `wizard.html` | Serve locally, walk all four steps, fail validation on purpose, parse the generated JSON, check 1280 px and 390 px |
+| `demo.html` | Serve locally, scan with **Simulate a scan**, confirm value, field and event trail update, then repeat in the demo APK |
 | `gen/android` regeneration | Diff against git; the receiver, `MainActivity.kt`, signing config and `rootDirRel` must survive |
 
 The emulator is a convenience, not the acceptance test. A physical Zebra, Honeywell or Datalogic
