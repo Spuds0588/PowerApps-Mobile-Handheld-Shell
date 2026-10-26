@@ -1,0 +1,6 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Merged only when config.json native.camera (or native.cameraScanner) is true. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Declaring CAMERA implies camera hardware; keep camera-less handhelds installable. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+</manifest>

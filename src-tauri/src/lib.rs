@@ -1,10 +1,11 @@
 use std::sync::OnceLock;
 
+use tauri::webview::{PermissionKind, PermissionResponse};
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 use url::Url;
 
 mod config;
-use config::ShellConfig;
+use config::{NativeConfig, ShellConfig};
 
 /// config.json is embedded in the binary at compile time, so there is no loose
 /// configuration file on the device and no runtime filesystem read.
@@ -19,6 +20,12 @@ const MAIN_WEBVIEW: &str = "powerapps";
 /// Runs on every page load of the handheld viewport.
 const INIT_SCRIPT: &str = r#"(function () {
   window.addEventListener('contextmenu', function (event) { event.preventDefault(); });
+  window.addEventListener('focusin', function (event) {
+    var target = event.target;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+      window.__LAST_FOCUS__ = target;
+    }
+  });
   console.log('[SHELL][READY] Mobile hardware runtime active.');
 })();"#;
 
@@ -30,6 +37,12 @@ const INJECTION_SCRIPT: &str = r#"(function () {
     window.__LAST_BARCODE__ = value;
     var active = document.activeElement;
     var isTextField = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
+    // A scan can arrive after the keyboard closed or the page blurred. Fall back to
+    // the last field the operator touched, which is where they expect the value.
+    if (!isTextField && window.__LAST_FOCUS__ && document.contains(window.__LAST_FOCUS__)) {
+      active = window.__LAST_FOCUS__;
+      isTextField = true;
+    }
     if (isTextField) {
       var proto = active.tagName === 'INPUT' ? HTMLInputElement.prototype : HTMLTextAreaElement.prototype;
       Object.getOwnPropertyDescriptor(proto, 'value').set.call(active, value);
@@ -48,6 +61,23 @@ const INJECTION_SCRIPT: &str = r#"(function () {
 fn load_embedded_config() -> ShellConfig {
     serde_json::from_str(COMPILED_CONFIG)
         .expect("[CONFIG][FATAL] Corrupted config.json embedded inside the binary.")
+}
+
+/// Device capabilities are opt-in. Anything the maker left off is refused before
+/// Android can ask the operator, so a granted OS permission cannot re-open it.
+fn native_permission(native: NativeConfig, kind: PermissionKind) -> PermissionResponse {
+    let allowed = match kind {
+        PermissionKind::Camera => native.camera,
+        PermissionKind::Microphone => native.microphone,
+        PermissionKind::Geolocation => native.location,
+        _ => true,
+    };
+    if allowed {
+        PermissionResponse::Default
+    } else {
+        println!("[NATIVE][DENIED] {kind:?} is not enabled in config.json");
+        PermissionResponse::Deny
+    }
 }
 
 fn is_domain_allowed(target: &Url, whitelist: &[String]) -> bool {
@@ -114,6 +144,11 @@ pub fn run() {
         "[CONFIG] Scanner action='{}' extra='{}'",
         config.scanner.intent_action, config.scanner.intent_extra_key
     );
+    let native = config.native;
+    println!(
+        "[CONFIG] Native camera={} cameraScanner={} microphone={} location={}",
+        native.camera, native.camera_scanner, native.microphone, native.location
+    );
 
     let power_app_url: Url = config
         .power_app_url
@@ -131,6 +166,7 @@ pub fn run() {
                 // the system bars.
                 .title(&config.app_name)
                 .initialization_script(INIT_SCRIPT)
+                .on_permission_request(move |_, kind| native_permission(native, kind))
                 .on_navigation(move |url| {
                     let allowed = is_domain_allowed(url, &whitelist);
                     if allowed {

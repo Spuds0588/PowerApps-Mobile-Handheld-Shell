@@ -2,4 +2,8 @@
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
   <external-path name="my_images" path="." />
   <cache-path name="my_cache_images" path="." />
+  <!-- wry writes captured photos to getExternalFilesDir(Pictures) and shares them
+       through this provider. Without this root the capture intent throws and wry
+       silently falls back to the plain file picker. -->
+  <external-files-path name="capture" path="." />
 </paths>

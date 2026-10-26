@@ -570,7 +570,7 @@ footer .refs a { color: #7b8ca6; }
             <span class="eyebrow">One file</span>
             <h2 id="config-title">Everything is <code>config.json</code></h2>
         </div>
-        <p>Six keys. The file is compiled into the APK, so there is nothing to copy onto the device and
+        <p>Seven keys. The file is compiled into the APK, so there is nothing to copy onto the device and
             nothing for an operator to edit.</p>
     </div>
 
@@ -584,6 +584,9 @@ footer .refs a { color: #7b8ca6; }
                     <tr><td>powerAppUrl</td><td>The Power Apps link that opens on launch. Use the <code>/play/</code> URL, not the editor.</td></tr>
                     <tr><td>keepScreenOn</td><td>Stops the display sleeping mid-shift.</td></tr>
                     <tr><td>interceptBackButton</td><td>Swallows the hardware and gesture Back button so nobody backs out of the app.</td></tr>
+                    <tr><td>native.camera</td><td>Adds the <code>CAMERA</code> permission. The Power App can show a live preview and take photos.</td></tr>
+                    <tr><td>native.microphone</td><td>Adds <code>RECORD_AUDIO</code>. For voice notes and audio capture.</td></tr>
+                    <tr><td>native.location</td><td>Adds coarse and fine location, for the Location signal and delivery checks.</td></tr>
                     <tr><td>scanner.intentAction</td><td>The broadcast action the scan engine sends. Must match the device profile exactly.</td></tr>
                     <tr><td>scanner.intentExtraKey</td><td>The string extra carrying the barcode. Zebra uses <code>com.symbol.datawedge.data_string</code>.</td></tr>
                     <tr><td>allowedDomains</td><td>Domains allowed to load in the viewport. Subdomains are included; everything else is blocked.</td></tr>
@@ -597,6 +600,7 @@ footer .refs a { color: #7b8ca6; }
   "powerAppUrl": "https://apps.powerapps.com/play/e/…",
   "keepScreenOn": true,
   "interceptBackButton": true,
+  "native": { "camera": false, "microphone": false, "location": false },
   "scanner": {
     "intentAction": "com.powerapps.handheld.SCAN",
     "intentExtraKey": "com.symbol.datawedge.data_string"
@@ -694,7 +698,8 @@ footer .refs a { color: #7b8ca6; }
         </div>
         <div class="gap">
             <h3>Not a camera scanner</h3>
-            <p>Hardware scan engines only. No CameraX, no ML Kit, no photo permissions.</p>
+            <p>Barcodes still come from the scan engine: no CameraX, no ML Kit, no camera decoding. The
+                camera, microphone and location stay off unless you turn them on in <code>config.json</code>.</p>
         </div>
         <div class="gap">
             <h3>Not an offline cache</h3>
