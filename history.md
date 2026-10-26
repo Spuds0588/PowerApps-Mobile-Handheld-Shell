@@ -64,11 +64,13 @@ still render as pages, and the root `index.html` is served at the site root (ver
 
 ### Other findings
 
-1. **A cancelled run can block the Rust cache save.**
+1. **The Rust cache save never recovered, so the step was removed.**
    `Failed to save: Unable to reserve cache with key v1-build-apk-Linux-x64-f273623e-95e1c76a, another
-   job may be creating this cache.` The previous run for the same lockfile was cancelled by
-   `concurrency` mid-build and its reservation was still held. Harmless (the next run rebuilds cold)
-   and self-healing, but it is why there was no cache to restore here.
+   job may be creating this cache.` It first happened when a run was cancelled by `concurrency`
+   mid-build, and it repeated on the next successful run (`40337375428`) with no competing job and an
+   empty cache list — the reservation never released. Rather than keep a step that warns on every
+   build to save three minutes on a build a maker runs rarely, `Swatinem/rust-cache` was dropped. A
+   cold build is 5m54s end to end.
 2. **Action majors matter now.** `actions/checkout@v4`, `setup-node@v4`, `setup-java@v4` and
    `upload-artifact@v4` run on Node 20, which the runner forces onto Node 24 with a deprecation
    warning; `setup-java@v4` is itself deprecated. Bumped to `checkout@v7`, `setup-node@v7`,
@@ -77,6 +79,13 @@ still render as pages, and the root `index.html` is served at the site root (ver
    Expected, and worth knowing before a long build is thrown away mid-flight.
 4. **`platforms;android-37.0` is correct and `platforms;android-37` is not.** Confirmed again in CI:
    the pinned install succeeded and the assertion on `platforms/android-37.0` passed.
+5. **Jekyll breaks twice, so the site no longer uses it.** Excluding the PRD with `_config.yml` fixed
+   the first failure, then `history.md` — which quotes `{{ try {{ const val` in a code block — failed
+   the very next Pages build the same way. GitHub Pages renders Liquid before it looks at code fences.
+   The site is one static file with no plugins, so `_config.yml` was removed and an empty `.nojekyll`
+   added: Pages now publishes the branch verbatim, and the footer links to `agents.md`, `history.md`
+   and `todo.md` on GitHub, where they are rendered properly. Rebuilding a markdown page with Jekyll
+   was never part of the product.
 
 ## 2026-10-26 — Emulator playtest: the whole scan path, on a real Android image
 

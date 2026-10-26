@@ -1,6 +1,0 @@
-# GitHub Pages builds this branch with Jekyll. The PRD keeps its original text,
-# including Rust and JavaScript samples containing `{{ ... }}`, which Jekyll
-# tries to render as Liquid and fails on. It is repository documentation, not a
-# page of the site, so keep it out of the build. The front door needs no plugins.
-exclude:
-  - "PRD-PowerApps Mobile Handheld Shell.md"

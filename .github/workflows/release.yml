@@ -66,13 +66,10 @@ jobs:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           targets: aarch64-linux-android,armv7-linux-androideabi
 
-      - name: Cache Rust build
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri -> target
-          # Only successful builds write this key; bump to invalidate.
-          prefix-key: v1
-
+      # No Rust cache on purpose. A cold Android build is about five minutes, a
+      # maker builds rarely, and the cache key was repeatedly refused with
+      # "Unable to reserve cache ... another job may be creating this cache" after
+      # a cancelled run held the reservation. Fewer moving parts wins.
       - name: Install Tauri CLI
         run: npm install --global @tauri-apps/cli@${{ env.TAURI_CLI }}
 
@@ -124,3 +121,4 @@ jobs:
           path: src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
           if-no-files-found: error
           retention-days: 90
+
