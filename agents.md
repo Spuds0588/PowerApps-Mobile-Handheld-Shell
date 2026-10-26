@@ -197,6 +197,7 @@ producing a working artifact. Therefore:
 | `config.json` | `python3 -m json.tool`; a real build must fail on invalid JSON or a bad URL |
 | `app/build.gradle.kts`, manifest, Kotlin | A real `tauri android build --apk`, then inspect the APK |
 | Scanner or injection path | `adb shell am broadcast` into a booted emulator or device; confirm the focused field changed |
+| Camera scanner | `./gradlew :app:testUniversalDebugUnitTest`; a real build; a decode on a device or with the emulator poster recipe; confirm the page field and `barcodeScanned` |
 | Workflow | YAML parse, then a dispatched run; read the logs, download the artifact, inspect it |
 | Release or version stamping | Run the extracted stamp block against a scratch repo with no tags and with an old tag, then a branch dispatch and a `main` push; inspect the release page, asset size and `versionName` |
 | `index.html` | Serve locally, exercise the trigger button, check 1280 px and 390 px, no console errors, then check the live Pages URL |
