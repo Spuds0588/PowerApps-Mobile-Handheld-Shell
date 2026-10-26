@@ -57,10 +57,23 @@ recorded in `history.md`. Anything that needs rugged hardware stays unchecked on
 - [x] Cold timings recorded in `history.md`: 5m54s job, 318.7s build step.
 - [x] Two CI failures found and fixed rather than worked around: `setup-android@v3` running the removed
       `sdkmanager tools`, and Jekyll failing the Pages build on Liquid in the PRD.
+- [x] Numbered releases: patch bump from the newest `v*` tag stamped into `tauri.conf.json` and
+      `Cargo.toml`, `versionName` asserted against the tag, APK attached to a `vX.Y.Z` release.
+      `v1.0.0` and `v1.0.1` published, 11,527,470 and 11,527,518 bytes.
+- [x] Config-only push proven end to end: `8eb8877` changed nothing but `config.json` and produced
+      `v1.0.1` with the new URL and both added sign-in hosts inside the APK.
+- [x] Branch dispatch proven: a realistic maker config (14 hosts, `Contoso Pick & Pack (Zone 4)`, a
+      custom scan action) built green and published nothing.
+- [x] Docs-only pushes are ignored by the workflow, so a README commit cannot cut a release.
+- [x] Verify step hardened: one `.so` per ARM ABI instead of a hardcoded library name.
+- [x] The released `v1.0.1` APK installed on the emulator, booted to the configured URL, reached
+      Microsoft over the network, and its scan broadcast survived R8 (`[SCANNER][SUCCESS]`).
 
 ## Phase 6 — Front door and README
 
 - [x] Root `index.html`, single file, no dependencies, sister-project palette and section pattern.
+- [x] Hero rewritten around dedicated devices: a warehouse scanner, a forklift tablet and a low-cost
+      handset, with the scanner promise kept. Checked at 1280 px and 390 px, live on Pages.
 - [x] Interactive handheld demo that performs the same DOM write the APK performs.
 - [x] Config reference, scan-engine setup steps, honest limits, copyable agent prompt.
 - [x] `README.md`: quickstart, config reference, scan path, artifact locations, verify commands.
@@ -78,6 +91,9 @@ recorded in `history.md`. Anything that needs rugged hardware stays unchecked on
 - [ ] Sign in with a real Entra ID tenant and add any extra domains it needs to `allowedDomains`.
 
 ## Known gaps
+
+- Every green `main` build cuts a release immediately; there is no draft or approval step, and the
+  version is stamped in CI rather than committed back to the repository.
 
 - The front door's device is a CSS illustration, not a product screenshot, and the demo is a
   simulation of the DOM write rather than a live Power Apps control.

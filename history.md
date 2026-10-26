@@ -2,6 +2,117 @@
 
 Newest first. Every number here was measured on this machine or in a named GitHub Actions run.
 
+## 2026-10-26 — Numbered releases, proven from a config-only push
+
+**Status:** three green runs, two published releases. `v1.0.0` and `v1.0.1` each carry the APK, and
+the `v1.0.1` APK was installed and exercised on the emulator with its ARM64 library.
+
+### What changed
+
+- Every green build on `main` stamps the next patch version from the newest `v*` tag into
+  `tauri.conf.json` and `Cargo.toml`, builds, and publishes a `vX.Y.Z` release with the APK and a table
+  of the `config.json` it was built from. A fresh copy has no tags, so its first build is `v1.0.0`.
+- The APK's `versionName` is asserted against the version about to be tagged, so a release cannot
+  describe a different binary. `versionCode` follows on its own: 1.0.0 → 1000000, 1.0.1 → 1000001.
+- Docs-only pushes (`**.md`, `index.html`, `.nojekyll`, `LICENSE`) no longer build or release.
+- The publish step runs last, needs `contents: write`, is limited to `refs/heads/main`, and skips a
+  commit that already carries a `v*` tag, so re-running a job cannot cut a second release.
+- The verify step no longer hardcodes the native library name. It asserts one `.so` per ARM ABI, which
+  survives a rename of the crate.
+
+### Runs
+
+| Run | What it proves | Job wall | Build step | Release |
+| --- | --- | --- | --- | --- |
+| `40376311360` push `93fa453` | stamping and publishing | 401s | 361.0s | `v1.0.0` |
+| `40377393835` push `8eb8877`, **config.json only** | the flow a maker runs | 343s | 296.0s | `v1.0.1` |
+| `40377462192` dispatch on `test/maker-config` | a realistic maker config builds; a branch run publishes nothing | 456s | 426.0s | none, step skipped |
+
+`Publish release` took 5.0s in both main runs and is skipped elsewhere. Nothing was called green from the
+run list alone; both releases were inspected by hand:
+
+- `v1.0.1` asset `app-universal-release.apk`, **11,527,518 bytes**, SHA-256
+  `2d378a7a8e1878135e435dda64a299fc9de4f225f2843a4debe85449397d95e6`.
+- `package: versionCode='1000001' versionName='1.0.1'`, label `PowerApps Handheld Shell`,
+  `native-code: 'arm64-v8a' 'armeabi-v7a'`, `Verifies` under APK signature v2, both libraries packaged.
+- The release body carries the new `powerAppUrl` (`your-environment-id` / `your-app-id`), and the
+  workflow's own grep found that URL and the new allowlist hosts inside the stripped `.so`.
+- The branch run's APK was labelled `Contoso Pick & Pack (Zone 4)` with its 14-host allowlist and custom
+  scan action, through a release build with R8.
+
+### The released APK on a real Android image
+
+`gh release download v1.0.1`, uninstall the debug-signed build, install, launch. The x86_64 image ships
+`libndk_translation.so` and reports `x86_64,arm64-v8a`, so the actual ARM artifact runs here.
+
+| Check | Result |
+| --- | --- |
+| Install | `Success` |
+| Boot | `[INIT] Starting PowerApps Mobile Handheld Shell`, then the `[CONFIG]` kiosk and scanner lines |
+| Navigation | `[NAVIGATION][ALLOWED] https://apps.powerapps.com/play/e/your-environment-id/a/your-app-id?tenantId=your-tenant-id` |
+| Real network | Microsoft answered the placeholder with `{"code":"EndpointInvalid","message":"Environment id your-environment-id is invalid."}`, drawn edge to edge with no browser chrome |
+| Scan in a release build | `[SCANNER][RECEIVED]` in Kotlin and Rust, then `[SCANNER][SUCCESS]`: R8 kept the JNI class |
+| Back | `[SECURITY][BLOCKED] Hardware Back suppressed.`, activity still `topResumedActivity` |
+| Screen | `fl=KEEP_SCREEN_ON` on the window |
+
+The DOM half of the scan path needs a page with a focused input, so it was taken again on a local debug
+build. What the release APK adds is that the receiver, the JNI bridge and the injection dispatch survive
+R8.
+
+### The full scan path, again, with an awkward maker config
+
+Debug x86_64 build, local page on `127.0.0.1:8766` over `adb reverse`, `appName` deliberately set to
+`Pick & Pack (Zone 4)`:
+
+| Check | Result |
+| --- | --- |
+| Label | `application-label:'Pick & Pack (Zone 4)'` — AGP escapes the placeholder, so `&` needs no workaround |
+| Page load | `[LAYOUT][READY]`, `[NAVIGATION][ALLOWED]`, page beacon `loaded=1` |
+| Allowlist | the page's own `location.href = http://example.com/` produced `[SECURITY][BLOCKED] Unauthorized navigation: http://example.com/` |
+| Two scans | `[SCANNER][INJECTED] Filled focused control` for `PLT-0093-22` and `00012345678905`; the page logged `input`, `change` and the `barcodeScanned` event for both |
+| No reload | `test.html` was fetched twice in total: once by a host `curl` check, once by the app. The scans added none. |
+
+### Findings
+
+1. **No maker-config build bug turned up.** Spaces, `&`, `(`, `)`, a long URL carrying `?` and `&`, and
+a custom scan action all build in debug and release. The hardcoded library name in the verify step was
+the one real fragility left, and it is gone.
+2. **`fetch-depth: 0` is load-bearing.** Without tags the stamp step picks `1.0.0` every time and the
+release then collides with the tag that already exists. The stamp block was run against a scratch repo
+with no tags and with an old `v1.0.4` tag before it went near CI.
+3. **The test server has to be a real background process.** A `nohup ... &` inside a synchronous shell
+call dies when the call returns. The webview then shows `net::ERR_EMPTY_RESPONSE`, the page's JavaScript
+never runs, and it looks exactly like a broken injection path. Start it as a background process and
+check HTTP 200 before blaming the app.
+4. **The emulator can run ARM64**, so the released artifact can be tested here instead of a locally
+built ABI twin.
+5. **`paths-ignore` is what keeps releases meaningful.** Otherwise a docs commit bumps the patch and
+republishes a byte-identical APK.
+6. **Microsoft's Power Apps auth hosts are four, not one.** The shipped default was missing
+`login.microsoft.com` and `secure.aadcdn.microsoftonline-p.com`
+([requirements](https://learn.microsoft.com/en-us/power-apps/limits-and-config)). The default now has all
+four plus the known SSO and STS hosts. `config.json` now says environment id, not tenant id, for the
+`/e/` segment. Power Apps also lists `*.azureedge.net`, `*.azurefd.net`, `graph.microsoft.com` and
+`*.azure-apim.net`; those stay opt-in and are named in the README.
+7. **The two-line `BuildTask.kt` fix is still required.** Nothing regenerated `gen/android` in these
+runs, and the local build would fail at `:app:rustBuildX8664Debug` without it.
+
+## 2026-10-26 — Front door sells dedicated devices, not one device class
+
+**Status:** `index.html` hero rewritten, checked at 1280 px and 390 px, no console errors, live on
+Pages.
+
+- New H1: "Give one Power App its own Android device." The lede names a warehouse scanner, a forklift
+tablet and the cheap handset a field tech carries, and keeps the scan-into-the-focused-field promise.
+- Chips moved from vendor names to device classes (`Warehouse scanners`, `Forklift & counter tablets`,
+`Low-cost handsets`, `Android 7+`). The vendor names already live in the demo section.
+- Meta title, description and Open Graph copy follow the same pitch. The micro line and the build
+section say the build publishes a numbered release, and the flow section sends makers to Releases
+instead of Actions artifacts.
+- The first lede measured 447 characters and read as a paragraph; it was trimmed to 351.
+- README follows the same framing and documents the shipped allowlist against Microsoft's published
+Power Apps host list.
+
 ## 2026-10-26 — First green CI run, Pages unblocked
 
 **Status:** run `40336020894` (push, commit `924bc3f`) succeeded. Job wall **5m54s**; the APK build

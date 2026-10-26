@@ -2,8 +2,8 @@
 
 ## Product contract
 
-A **Tauri v2 Android shell** that puts one Microsoft Power App on one rugged handheld, and does
-exactly this:
+A **Tauri v2 Android shell** that gives one Microsoft Power App its own Android device - a warehouse
+scanner, a forklift tablet or a low-cost handset - and does exactly this:
 
 - Embed the root `config.json` at compile time with `include_str!`; invalid or incomplete config must
   fail the build, not the runtime.
@@ -40,7 +40,7 @@ and this contract disagree, fix the code or record the decision in `history.md`.
 | `src-tauri/gen/android/app/dev-release.keystore` | Public development key. Committed on purpose. |
 | `ui/index.html` | Packaged splash asset. Not mounted, because the window opens on the remote URL. |
 | `index.html` | Published front door (GitHub Pages, legacy `main` / root source). |
-| `.github/workflows/release.yml` | Android APK build plus artifact verification on push to `main` and manual dispatch. |
+| `.github/workflows/release.yml` | Android APK build, artifact verification, version stamping and a numbered GitHub release, on push to `main` and on manual dispatch. |
 
 ## Commands
 
@@ -64,6 +64,9 @@ adb shell am broadcast -a com.powerapps.handheld.SCAN \
 python3 -m http.server 8080                                         # inspect the Pages front door
 gh workflow run release.yml && gh run watch
 gh run download <run-id> -n PowerApps-Handheld-Release-APK
+gh release list                                                      # v1.0.0, v1.0.1, ...
+gh release download v1.0.1                                           # what a maker actually gets
+gh workflow run release.yml --ref <branch>                           # build a maker config, publish nothing
 ```
 
 ## Rules
@@ -96,6 +99,12 @@ gh run download <run-id> -n PowerApps-Handheld-Release-APK
     no external font, script, image or build step. Do not add a Pages deploy workflow: Pages is
     already enabled on legacy `main` / root.
 12. **Full files.** When generating or replacing code, write complete runnable files.
+13. **Releases are the delivery.** A green `main` build stamps the next patch version from the newest
+    `v*` tag into `tauri.conf.json` and `Cargo.toml`, asserts the APK carries that version, and
+    publishes the APK on a `vX.Y.Z` release. The tag is the version record: the stamp is never
+    committed back, because that push would restart the job. Docs-only pushes (`**.md`, `index.html`,
+    `.nojekyll`, `LICENSE`) do not build or release. A run from any other ref builds and uploads but
+    publishes nothing, which is how a maker tests a config without cutting a version.
 
 ## CI discipline (learned the hard way)
 
@@ -121,6 +130,12 @@ producing a working artifact. Therefore:
 7. **Record the numbers.** Job wall time, per-step time, artifact size, and every failure and fix go
    into `history.md`. Do not paraphrase a guess as a measurement, and never derive a step time by
    subtracting from the job wall — read it from the log.
+8. **Checkout stays `fetch-depth: 0`.** The next version comes from `git tag`, and generated release
+   notes need the previous tag's commit. A shallow clone silently republishes `v1.0.0` and then fails
+   on the tag that already exists.
+9. **A re-run must not cut a second release.** The publish step skips when the checked-out commit
+   already carries a `v*` tag, and it runs last, so a failed verify never leaves a release behind.
+   It also needs `contents: write`; the rest of the job needs nothing.
 
 ## Verification gates
 
@@ -131,6 +146,7 @@ producing a working artifact. Therefore:
 | `app/build.gradle.kts`, manifest, Kotlin | A real `tauri android build --apk`, then inspect the APK |
 | Scanner or injection path | `adb shell am broadcast` into a booted emulator or device; confirm the focused field changed |
 | Workflow | YAML parse, then a dispatched run; read the logs, download the artifact, inspect it |
+| Release or version stamping | Run the extracted stamp block against a scratch repo with no tags and with an old tag, then a branch dispatch and a `main` push; inspect the release page, asset size and `versionName` |
 | `index.html` | Serve locally, exercise the trigger button, check 1280 px and 390 px, no console errors, then check the live Pages URL |
 | `gen/android` regeneration | Diff against git; the receiver, `MainActivity.kt`, signing config and `rootDirRel` must survive |
 
