@@ -2,6 +2,50 @@
 
 Newest first. Every number here was measured on this machine or in a named GitHub Actions run.
 
+## 2026-10-26 — Playing the scanner as an operator found a crash and a lie
+
+**Status:** two defects, both in the scanner shipped in 11,866,563 bytes, both fixed and retested. Back,
+reopen, rotation, torch and tap-to-focus were driven on the released demo artifact rather than a debug
+build, because the release is what a maker installs.
+
+### What broke
+
+1. **The second scan killed the app.** Opening the preview, closing it with Back and opening it again threw
+   `IllegalStateException: The specified child already has a parent` from `ScanOverlay.show()`: the preview
+   and the button bar were re-added to a container that still held them. `hide()` had detached the overlay
+   from the window but not emptied it, so every reopen after the first crashed the process. The overlay is now
+   built once in `init` and `show()` only attaches it, which also stops a new button bar and a new touch
+   listener being built per scan. Retested: three open/close cycles, including one across a rotation, with no
+   exception.
+2. **The torch button claimed success on hardware it could not touch.** CameraX logged
+   `Unable to enableTorch due to there is no flash unit` while the app logged `Torch on`, because the app
+   flipped its own guess instead of asking the camera. The button now starts disabled, reads **No flash**
+   when `cameraInfo.hasFlashUnit()` is false, and the bind log says so. The label follows the request when
+   there is a flash unit.
+3. **Tap-to-focus had no observable outcome either way.** It sent the action and hoped. It now logs the
+   request and the result: `Focus requested 640,300`, then `Focus 640,300 success=false` about five seconds
+   later on the virtual camera, with the analysis loop still counting frames throughout. A slow answer on a
+   camera with nothing to focus on is the honest result, not a hang.
+
+### What held
+
+| Check | Result |
+| --- | --- |
+| Rotation mid-preview | overlay survives the configuration change, preview re-orients to 720x1280, buttons re-lay out, Back still closes it |
+| Reopen after rotation | binds again, analysis alive |
+| Rapid taps on Scan | one overlay, because `open()` returns when it is already showing |
+| Analysis through all of it | `Analysis alive: 60 frames`, then `120 frames`, no stall |
+
+### Findings
+
+1. **A control that cannot work must not look like it worked.** The torch case is the cheap version of this;
+   the expensive version is a maker trusting a log line that the app invented.
+2. **The overlay's lifetime is the thing to test.** The first-user run in the previous entry opened the
+   scanner once, which is exactly the case that hides a re-add bug. Any UI that is opened and closed all
+   shift needs a reopen in its check, and `agents.md` now says so for the scanner.
+3. **The virtual camera has no flash unit and nothing to focus on**, so those two controls can only prove
+   their degraded paths here. Real flash and real focus stay on the physical-device list.
+
 ## 2026-10-26 — Camera scanner: a scan from the camera, all the way into the page
 
 **Status:** merged as `43cc137`. The released demo APK, installed fresh, decoded a generated QR from the

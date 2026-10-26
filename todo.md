@@ -156,6 +156,9 @@ including a live decode from the virtual-scene camera, is in `history.md`.
       Observed on the emulator: the demo page reported field `item`, hook `set` and the 15-character
       value, with no reload.
 - [x] Floating scan button gated by `cameraScanner`, plus the config block, wizard and README entries.
+- [x] Operator playtest on the released artifact: open, close, reopen, rotate mid-preview, press torch and
+      tap the preview. It found a crash on the second open (fixed: the overlay is built once) and a torch
+      button that claimed success without a flash unit (fixed: disabled, labelled, logged).
 - [x] Measure the size the libraries add against the 11.5 MB release; the decoder only has to go if the
       delta passes 3 MB. Measured: 11,499,314 -> 11,866,563 bytes, **+367 KB** after R8.
 - [ ] One physical-device decode with a printed barcode, recorded as a measurement. The emulator proved

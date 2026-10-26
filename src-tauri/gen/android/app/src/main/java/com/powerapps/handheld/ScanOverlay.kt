@@ -20,6 +20,7 @@ import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
+import androidx.camera.core.TorchState
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -40,8 +41,9 @@ import java.util.concurrent.Executors
  */
 class ScanOverlay(private val activity: ComponentActivity) {
   private val preview = PreviewView(activity)
-  private val root = FrameLayout(activity).apply { setBackgroundColor(Color.BLACK) }
+  private val root = FrameLayout(activity)
   private val hint = TextView(activity)
+  private val torch = Button(activity)
 
   private val receiver = BarcodeReceiver()
   private var button: Button? = null
@@ -53,6 +55,29 @@ class ScanOverlay(private val activity: ComponentActivity) {
   private var lastAt = 0L
 
   val isShowing: Boolean get() = root.parent != null
+
+  // Built once: the overlay is opened and closed all shift, and re-adding a view that
+  // still has its old parent throws.
+  init {
+    root.setBackgroundColor(Color.BLACK)
+    root.addView(preview, matchParent())
+    root.addView(
+      statusBar(),
+      FrameLayout.LayoutParams(
+        FrameLayout.LayoutParams.MATCH_PARENT,
+        FrameLayout.LayoutParams.WRAP_CONTENT,
+        Gravity.BOTTOM,
+      ),
+    )
+
+    // Tap the preview to focus and meter, which is what an operator does when a code
+    // is small or the light is bad.
+    preview.setOnTouchListener { view, event ->
+      if (event.action == MotionEvent.ACTION_UP) focus(event.x, event.y)
+      view.performClick()
+      true
+    }
+  }
 
   /** The floating 56dp trigger. A native view, so a Power App re-render cannot remove it. */
   fun attach() {
@@ -105,34 +130,25 @@ class ScanOverlay(private val activity: ComponentActivity) {
   }
 
   private fun show() {
-    val content = host()
-    root.addView(preview, matchParent())
-    root.addView(statusBar(), FrameLayout.LayoutParams(
-      FrameLayout.LayoutParams.MATCH_PARENT,
-      FrameLayout.LayoutParams.WRAP_CONTENT,
-      Gravity.BOTTOM,
-    ))
-
-    // Tap the preview to focus and meter, which is what an operator does when a code
-    // is small or the light is bad.
-    preview.setOnTouchListener { view, event ->
-      if (event.action == MotionEvent.ACTION_UP) {
-        val point = preview.meteringPointFactory.createPoint(event.x, event.y)
-        camera?.cameraControl?.startFocusAndMetering(
-          FocusMeteringAction.Builder(
-            point,
-            FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE,
-          ).build(),
-        )
-        view.performClick()
-      }
-      true
-    }
-
-    content.addView(root, matchParent())
+    if (isShowing) return
+    host().addView(root, matchParent())
     root.bringToFront()
     button?.visibility = View.GONE
     start()
+  }
+
+  private fun focus(x: Float, y: Float) {
+    val control = camera?.cameraControl ?: return
+    val action = FocusMeteringAction.Builder(
+      preview.meteringPointFactory.createPoint(x, y),
+      FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE,
+    ).build()
+    Log.d(TAG, "[SCANNER][CAMERA] Focus requested ${x.toInt()},${y.toInt()}")
+    val pending = control.startFocusAndMetering(action)
+    pending.addListener({
+      val ok = runCatching { pending.get().isFocusSuccessful }.getOrDefault(false)
+      Log.d(TAG, "[SCANNER][CAMERA] Focus ${x.toInt()},${y.toInt()} success=$ok")
+    }, ContextCompat.getMainExecutor(activity))
   }
 
   private fun statusBar() = LinearLayout(activity).apply {
@@ -149,10 +165,14 @@ class ScanOverlay(private val activity: ComponentActivity) {
 
     addView(LinearLayout(activity).apply {
       orientation = LinearLayout.HORIZONTAL
-      addView(Button(activity).apply {
+      // Enabled only when the camera reports a flash unit, so the control never
+      // pretends to do something the hardware cannot.
+      torch.apply {
         text = "Torch"
+        isEnabled = false
         setOnClickListener { toggleTorch() }
-      })
+      }
+      addView(torch)
       addView(Button(activity).apply {
         text = "Close"
         setOnClickListener { hide() }
@@ -161,9 +181,10 @@ class ScanOverlay(private val activity: ComponentActivity) {
   }
 
   private fun toggleTorch() {
-    val control = camera?.cameraControl ?: return
-    val next = !(camera?.cameraInfo?.torchState?.value == 1)
-    control.enableTorch(next)
+    val camera = camera ?: return
+    val next = camera.cameraInfo.torchState.value != TorchState.ON
+    camera.cameraControl.enableTorch(next)
+    torch.text = if (next) "Torch off" else "Torch"
     Log.d(TAG, "[SCANNER][CAMERA] Torch ${if (next) "on" else "off"}")
   }
 
@@ -206,7 +227,14 @@ class ScanOverlay(private val activity: ComponentActivity) {
         report("Camera unavailable: ${err.message}")
         return@addListener
       }
-      Log.d(TAG, "[SCANNER][CAMERA] Preview and analysis bound")
+      val flash = camera?.cameraInfo?.hasFlashUnit() == true
+      torch.isEnabled = flash
+      torch.text = if (flash) "Torch" else "No flash"
+      if (flash) {
+        Log.d(TAG, "[SCANNER][CAMERA] Preview and analysis bound")
+      } else {
+        Log.d(TAG, "[SCANNER][CAMERA] Preview and analysis bound; no flash unit, torch disabled")
+      }
     }, ContextCompat.getMainExecutor(activity))
   }
 

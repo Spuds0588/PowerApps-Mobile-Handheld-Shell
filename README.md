@@ -107,8 +107,10 @@ profile enables all of them so the demo page can exercise them; the shipped `con
 ### Camera scanner
 
 A device with no scan engine (a cheap handset, a phone, a tablet) can still scan. `native.cameraScanner`
-adds a floating **Scan** button; tapping it opens a camera preview with a torch and tap-to-focus, and the
-first barcode it reads closes the preview and lands in the page.
+adds a floating **Scan** button; tapping it opens a camera preview, and the first barcode it reads closes
+the preview and lands in the page. Torch and tap-to-focus follow the hardware: on a camera with no flash
+unit the torch button reads **No flash** and stays disabled, and a device without working autofocus
+answers the tap with a failed focus rather than pretending. Both outcomes are logged.
 
 - It delivers through `BarcodeReceiver.dispatch`, the call the DataWedge broadcast makes, so a camera
   scan fires `input`, `change` and `barcodeScanned` exactly like a trigger pull. Power Apps cannot tell
@@ -116,7 +118,8 @@ first barcode it reads closes the preview and lands in the page.
 - Formats are Code 128, Code 39, EAN-13, UPC-A, ITF, QR, Data Matrix, PDF 417 and Aztec: ZXing core, no
   Play Services and no model download, so it works offline.
 - The preview is an overlay inside the running app, never a second screen, so the page keeps its state
-  and the focused field survives. Back closes the preview before the kiosk shield sees it.
+  and the focused field survives. Back closes the preview before the kiosk shield sees it, and the same
+  overlay is reopened for every scan, so a shift's worth of scans costs one camera session each.
 - The ZXing and CameraX libraries are in every APK, even with the flag off; the button, the camera and
   the permission are not. See `history.md` for the measured size.
 - The Power Apps **Barcode reader** control is still not reachable: Microsoft runs that one natively and
