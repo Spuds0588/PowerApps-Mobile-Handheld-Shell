@@ -157,7 +157,7 @@ including a live decode from the virtual-scene camera, is in `history.md`.
       value, with no reload.
 - [x] Floating scan button gated by `cameraScanner`, plus the config block, wizard and README entries.
 - [x] Measure the size the libraries add against the 11.5 MB release; the decoder only has to go if the
-      delta passes 3 MB.
+      delta passes 3 MB. Measured: 11,499,314 -> 11,866,563 bytes, **+367 KB** after R8.
 - [ ] One physical-device decode with a printed barcode, recorded as a measurement. The emulator proved
       the whole chain against a generated code on the virtual-scene poster; a real lens, a real print and
       a real focus hunt stay with Phase 8's hardware list.

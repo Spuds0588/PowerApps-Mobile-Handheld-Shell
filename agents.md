@@ -84,6 +84,9 @@ export ANDROID_HOME="$HOME/android-dev/sdk"
 export NDK_HOME="$ANDROID_HOME/ndk/27.3.13750724"
 
 (cd src-tauri/gen/android && ./gradlew :app:testUniversalDebugUnitTest)   # decoder unit tests
+# Scan from the emulator camera: add flat posters to $ANDROID_HOME/emulator/resources/Toren1BD.posters
+# pointing at a QR in poster.png, boot with -no-snapshot -camera-back virtualscene, then tap Scan.
+# Recipe and numbers: history.md, "Camera scanner" entry.
 cargo fmt --manifest-path src-tauri/Cargo.toml --check
 cargo check --manifest-path src-tauri/Cargo.toml --target aarch64-linux-android --lib
 python3 -m json.tool config.json

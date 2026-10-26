@@ -2,6 +2,92 @@
 
 Newest first. Every number here was measured on this machine or in a named GitHub Actions run.
 
+## 2026-10-26 — Camera scanner: a scan from the camera, all the way into the page
+
+**Status:** merged as `43cc137`. The released demo APK, installed fresh, decoded a generated QR from the
+emulator camera and the demo page reported it: field `item`, hook `set`, `input` / `change` /
+`barcodeScanned`, no reload, and Back closed the preview. The shipped config still declares `INTERNET`
+only and shows no Scan button.
+
+### What changed
+
+- `ScanOverlay.kt` — the whole camera path: permission request, CameraX binding, 1280x720 analysis
+  request, duplicate guard, torch, tap-to-focus, close. It is an overlay on the window's decor view
+  inside `MainActivity`, never a second activity, so the webview keeps the page and its focused field.
+- `BarcodeDecoder.kt` — pixels to text and nothing else: one `PlanarYUVLuminanceSource` over the luma
+  plane, `MultiFormatReader` with Code 128, Code 39, EAN-13, UPC-A, ITF, QR, Data Matrix, PDF 417 and
+  Aztec, `TRY_HARDER`. A reader per call keeps it stateless.
+- `BarcodeReceiver.dispatch` — the one delivery route. The hardware receiver and the camera scanner both
+  call it, so the page cannot tell a trigger pull from a camera read.
+- `MainActivity.kt` — the floating 56dp button exists only under `BuildConfig.CAMERA_SCANNER`; Back
+  closes the overlay before the kiosk shield runs; the camera permission result opens the preview.
+- `app/build.gradle.kts` — CameraX 1.4.2 (`core`, `camera2`, `lifecycle`, `view`) and ZXing `core` 3.5.3,
+  plus `BuildConfig.CAMERA_SCANNER` from `native.cameraScanner`.
+- `app/src/test/.../BarcodeDecoderTest.kt` — five JVM tests over generated frames: Code 128, QR, Data
+  Matrix, a padded row stride, and a blank frame.
+- `config.demo.json` turns `cameraScanner` on; wizard, front door and README gained the flag.
+
+### Runs
+
+| Run | Config | Result |
+| --- | --- | --- |
+| `40412900598` push `43cc137` | shipped, `cameraScanner: false` | 457s, green, `INTERNET` only |
+| `40412960539` dispatch `config=demo` | demo, all four flags on | 479s, green, the six permissions |
+
+The demo release is **11,866,563 bytes**, up from 11,499,314 before the scanner: **+367,249 bytes, +3.2 %**.
+The shipped artifact is 11,587,545 bytes. R8 keeps only the classes the scanner actually reaches, which is
+why two libraries cost a third of a megabyte instead of the 2 MB the plan estimated. Under the 3 MB
+budget, so the "libraries ship in every build" trade stands.
+
+### On the emulator
+
+| Check | Result |
+| --- | --- |
+| Shipped config, CI artifact | `[CONFIG] Native camera=false cameraScanner=false microphone=false location=false`, no Scan button, no prompt |
+| Demo release, fresh install | Scan button, camera prompt, granted, `Preview and analysis bound`, `Analysis 640x480` |
+| Camera decode | `[SCANNER][CAMERA] Decoded: DEMO-CAM-778812` |
+| Delivery | `[SCANNER][SUCCESS] Dispatched barcode payload: DEMO-CAM-778812`, page logged `[SCANNER][INJECTED] Filled focused control` |
+| Page, first-time-user run | value in Item, `SCANS 1`, `LENGTH 15`, `FIELD item`, `HOOK set`, `input` 17:40:44.122, `change` .123, `barcodeScanned` .142 |
+| Back | closed the preview and the kiosk shield did not fire |
+| Unit tests | 5 of 5, `:app:testUniversalDebugUnitTest` |
+
+### Findings
+
+1. **The emulator can serve a barcode, but not from the room.** The virtual scene magnifies its textures
+   across furniture, so no tiling size puts a whole code in frame at 640x480: at 176 px tiles the codes
+   were 3 px per module, at 640 px they were cropped by the shelf. The recipe that works is
+   `Toren1BD.posters` in `$ANDROID_HOME/emulator/resources/`: three extra posters of 1.6 world units at
+   `0 0.30 -2.60`, `-2.40 0.30 0` and `2.40 0.30 0`, each `default poster.png`, with `poster.png`
+   replaced by a generated QR. Restore the originals afterwards; they are emulator assets, not repo files.
+2. **CameraX refuses to start on an image whose camera list disagrees with its features.** The only
+   installed image advertises `android.hardware.camera.front` but had no front device, so every
+   `bindToLifecycle` died with `CameraIdListIncorrectException: Expected camera missing from device`.
+   The fix is the AVD (`hw.camera.front = emulated`, then restart with `-camera-front emulated`), not the
+   app. The app also asks for the rear lens and falls back to whatever exists, because a handheld with one
+   camera should still scan.
+3. **`-no-snapshot` is not optional for camera work.** A snapshot restore keeps the old scene textures
+   and a running app with its overlay open, which reads exactly like "the fix did nothing".
+4. **The YUV analysis stream stayed at 640x480** whatever the resolution selector asked for, on this
+   image. Decoding is fine at that size once the code fills about 200 px; a phone or handheld delivers
+   720p and better.
+5. **Anything added to `android.R.id.content` lands behind the page.** Tauri mounts the webview there
+   after `onCreate`, so the first version of the button was invisible. The decor view is above it, and
+   that is where the button and the preview live.
+6. **R8 plus ARM translation still decodes.** The proof came from the released arm64 artifact running on
+   an x86_64 image, not from a debug build, which is the artifact a maker actually installs.
+7. **A camera scan is one `dispatch` call away from a trigger pull**, which is why nothing in the page,
+   the docs or Power Apps needed a second path. `ScanOverlay` calls the same function `BarcodeReceiver`
+   calls, and the demo page's event trail is identical to the hardware run recorded above.
+
+### Structure this left behind
+
+- `BarcodeDecoder.kt` — pixels to text. The only place a barcode format list exists, the only thing the
+  unit tests touch, and the file that changes if a decoder is swapped.
+- `ScanOverlay.kt` — the camera session and its UI: permission, binding, analysis loop, duplicate guard,
+  torch, focus, close. It owns every frame and calls exactly one thing outside itself, `dispatch`.
+- `BarcodeReceiver.kt` — the one delivery route, shared by the broadcast and the camera.
+- `MainActivity.kt` — whether the button exists, and that Back closes the overlay first.
+
 ## 2026-10-26 — Native inputs v1: an opt-in permission gate, offline by default
 
 **Status:** merged as #3 (`755e472`). The default config's APK declares `INTERNET` and nothing else; the
