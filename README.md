@@ -120,6 +120,8 @@ preview logs CameraX's answer rather than assuming it worked. Both are logged.
 - The preview is an overlay inside the running app, never a second screen, so the page keeps its state
   and the focused field survives. Back closes the preview before the kiosk shield sees it, and the same
   overlay is reopened for every scan, so a shift's worth of scans costs one camera session each.
+- With the soft keyboard open the **Scan** button sits behind it, so close the keyboard before scanning
+  with the camera. A hardware trigger still lands in the focused field with the keyboard up.
 - The ZXing and CameraX libraries are in every APK, even with the flag off; the button, the camera and
   the permission are not. See `history.md` for the measured size.
 - The Power Apps **Barcode reader** control is still not reachable: Microsoft runs that one natively and

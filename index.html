@@ -505,7 +505,7 @@ footer .refs a { color: #7b8ca6; }
         <div class="stage-meta" aria-live="polite">
             <p><strong id="meta-name">Simulation.</strong> <span id="meta-copy">This page reuses the same DOM
                 write the APK performs, so you can see where the value lands.</span></p>
-            <span class="stage-spec" id="meta-spec">sub-50 ms &middot; no reload</span>
+            <span class="stage-spec" id="meta-spec">field write &middot; no reload</span>
         </div>
         <p class="stage-attribution">Illustration, not live tenant data. The device is drawn in CSS; no
             product screenshots are used.</p>
@@ -591,7 +591,7 @@ footer .refs a { color: #7b8ca6; }
                     <tr><td>native.camera</td><td>Adds the <code>CAMERA</code> permission. The Power App can show a live preview and take photos.</td></tr>
                     <tr><td>native.microphone</td><td>Adds <code>RECORD_AUDIO</code>. For voice notes and audio capture.</td></tr>
                     <tr><td>native.location</td><td>Adds coarse and fine location, for the Location signal and delivery checks.</td></tr>
-                    <tr><td>native.cameraScanner</td><td>Adds a floating <strong>Scan</strong> button that reads barcodes with the camera, for devices with no scan engine. Same delivery path as a trigger pull.</td></tr>
+                    <tr><td>native.cameraScanner</td><td>Adds a floating <strong>Scan</strong> button that reads barcodes with the camera, for devices with no scan engine. Declares <code>CAMERA</code> for the scanner without opening the camera to the Power App. Same delivery path as a trigger pull.</td></tr>
                     <tr><td>scanner.intentAction</td><td>The broadcast action the scan engine sends. Must match the device profile exactly.</td></tr>
                     <tr><td>scanner.intentExtraKey</td><td>The string extra carrying the barcode. Zebra uses <code>com.symbol.datawedge.data_string</code>.</td></tr>
                     <tr><td>allowedDomains</td><td>Domains allowed to load in the viewport. Subdomains are included; everything else is blocked.</td></tr>

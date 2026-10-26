@@ -141,8 +141,10 @@ scan arrives after focus was lost, which is why it belongs in v1 rather than wit
   `resources/` directory: three extra flat posters placed around the scene camera at 1.6 world units,
   one holding a generated QR. The decoder's deterministic unit test is the permanent guard; the poster
   recipe is in `history.md` for the next run.
-- Scanning while the soft keyboard is open: the value lands in the remembered field, but the keyboard
-  may stay hidden after the overlay closes. Verify, and restore it if it feels wrong.
+- Scanning while the soft keyboard is open: measured, and the concern was half wrong. The floating
+  button sits behind the IME, so the overlay cannot be opened while typing; a hardware trigger still
+  lands in the focused field with the keyboard up. A camera scan after Back fills the remembered field
+  and the keyboard stays down, which leaves focus where the operator was. See `history.md`.
 
 ## Changes, by layer
 
@@ -203,6 +205,8 @@ v1 is about a day. v2 is about three more.
 - Location on: one dialog, then `adb emu geo fix -122.4194 37.7749` shows up in the readout.
 - Files: an upload from Downloads works with no permission; capture writes a JPEG through the provider.
 - Install compatibility: `aapt dump badging` reports camera, microphone and GPS as not required.
+  Confirmed on the released demo APK: `android.hardware.camera`, `.microphone`, `.location`,
+  `.location.gps` and `.location.network` all report `uses-feature-not-required`.
 
 The only image on this host is an Android TV build: no DocumentsUI, a camera stub instead of a camera
 app, and no GPS provider (`cmd location providers add-test-provider` is refused for the shell uid). The

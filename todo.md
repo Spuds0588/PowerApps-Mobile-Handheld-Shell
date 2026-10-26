@@ -101,6 +101,8 @@ recorded in `history.md`. Anything that needs rugged hardware stays unchecked on
 - [ ] Confirm the system bars stay hidden and Back stays suppressed on a phone-style navigation mode.
 - [ ] Confirm keep-screen-on through a full shift with the screen timeout set low.
 - [ ] Sign in with a real Entra ID tenant and add any extra domains it needs to `allowedDomains`.
+- [ ] Sideload the demo APK on a phone with no scan engine, decode a printed code with the camera, and
+      press torch and tap-to-focus against a real lens with real flash.
 
 ## Phase 9 — Native inputs, v1 (delivered)
 
@@ -122,17 +124,18 @@ Design, evidence and open questions live in [native-inputs-plan.md](native-input
       capture URI wry builds is inside a declared path instead of throwing and falling back.
 - [x] Last-focused-field memory in the init script and the injection script, so a scan that arrives
       after focus was lost still lands in the field the operator was using. Observed after tapping away.
-- [x] `demo.html` capabilities card: camera preview, microphone level, file name and size, location
-      readout, and a blob download that shows the known gap honestly. `config.demo.json` turns the
-      features on.
+- [x] `demo.html` capabilities card: camera preview, microphone level, file name and size, and a
+      location readout. No download button: wry has no Android download support, so the card does not
+      pretend to test one (see the open decision in `native-inputs-plan.md`). `config.demo.json` turns
+      the features on.
 - [x] Builder checkboxes for the three permissions, written into the generated JSON; front-door
       "Honest limits" wording and config table; README permission notes and how to reset a denial.
 - [x] `agents.md` gains one rule: a new device permission goes through the `native` block and
       `native-inputs-plan.md`, so the next agent does not add one ad hoc.
 - [x] CI: the Verify APK step asserts the built permission list matches the config, so a regression
       fails the build instead of shipping. Green for `INTERNET` alone and for the six.
-- [x] Emulator checks from the plan's acceptance matrix, with permission counts, sizes and runs
-      recorded in `history.md`.
+- [x] Every acceptance check the plan's matrix lists except the two below, with permission counts,
+      sizes and runs recorded in `history.md`.
 - [ ] Photo capture and file upload seen end to end. This system image has no DocumentsUI and only a TV
       camera stub, so `<input type=file>` answers "You don't have an app that can do this". Needs a
       phone or handheld image.
@@ -164,6 +167,10 @@ including a live decode from the virtual-scene camera, is in `history.md`.
       so README promises the logged answer, not a failed focus.
 - [x] Measure the size the libraries add against the 11.5 MB release; the decoder only has to go if the
       delta passes 3 MB. Measured: 11,499,314 -> 11,866,563 bytes, **+367 KB** after R8.
+- [x] Soft keyboard with the scanner, measured on the released APK: the floating **Scan** button sits
+      behind the IME, so the overlay cannot be opened while typing. A hardware trigger with the keyboard
+      up fills the focused field and leaves the keyboard up; a camera scan after Back fills the
+      remembered field and the keyboard stays down. Recorded in `history.md`.
 - [ ] One physical-device decode with a printed barcode, recorded as a measurement. The emulator proved
       the whole chain against a generated code on the virtual-scene poster; a real lens, a real print and
       a real focus hunt stay with Phase 8's hardware list.

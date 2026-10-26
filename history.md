@@ -2,6 +2,40 @@
 
 Newest first. Every number here was measured on this machine or in a named GitHub Actions run.
 
+## 2026-10-26 — Badging, the soft keyboard, and six stale claims
+
+**Status:** docs only, no code changed, no rebuild. Two open claims were measured on the released demo
+APK (`30f8891a…`, 11,866,563 bytes); six statements that had drifted from the code were corrected.
+
+### The released demo APK, measured with `aapt2` (build-tools 37.0.0)
+
+| Check | Result |
+| --- | --- |
+| Permissions | `CAMERA`, `RECORD_AUDIO`, `MODIFY_AUDIO_SETTINGS`, `ACCESS_COARSE_LOCATION`, `ACCESS_FINE_LOCATION`, `INTERNET`, plus the library's own `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` |
+| Required hardware | `android.hardware.camera`, `.microphone`, `.location`, `.location.gps`, `.location.network` and `android.software.leanback` all report `uses-feature-not-required` |
+
+That closes the plan's last unrecorded v1 acceptance check, on the artifact a maker installs.
+
+### Soft keyboard with the scanner (same APK, 1280x720 landscape)
+
+| Action | Result |
+| --- | --- |
+| Focus Item, keyboard up | IME shown; floating button bounds `[1101,615][1249,689]`, underneath the keyboard, so it cannot be pressed |
+| Hardware trigger while typing | `KB-HW-0001` landed in Item with `input` / `change` / `barcodeScanned`; keyboard stayed up, caret at the end |
+| Back, then Scan | QR decoded; `DEMO-CAM-778812` landed in the remembered Item field with the keyboard down; the panel reported field `item`, hook `set` |
+
+### Corrected in this pass
+
+- `todo.md` no longer claims a blob-download test in `demo.html`: the card has four controls, and the
+  download gap stays an open decision in the plan.
+- Phase 9 now says "every check except the two below" instead of marking the whole acceptance matrix.
+- Phase 8 carries the camera-lens check that Phase 10 was deferring to, so the pointer resolves.
+- `native-inputs-plan.md`: the keyboard speculation is replaced by the measurement, and the badging
+  result sits beside the acceptance check it belongs to.
+- `index.html` drops the never-measured "sub-50 ms" spec; the scanner row and the wizard now say
+  `CAMERA` comes with `cameraScanner`, matching `README.md` and `build.gradle.kts`.
+- `README.md` gains the keyboard sentence: the button sits behind the IME, a hardware trigger does not.
+
 ## 2026-10-26 — Torch, focus and rotation re-run on the released bytes
 
 **Status:** no code changed. The `demo-latest` APK (`30f8891a…`, 11,866,563 bytes) was pulled from the
