@@ -113,12 +113,14 @@ producing a working artifact. Therefore:
    the `.0`); `platforms;android-37` does not exist and `sdkmanager` silently finds nothing.
 4. **`NDK_HOME` must point at the versioned NDK directory**, not `$ANDROID_HOME/ndk`. Assert with
    `test -d` in the workflow.
-5. **Rust cache keys may only be written by successful builds.** No `cache-on-failure`; bump
-   `prefix-key` to invalidate.
+5. **There is no dependency cache, deliberately.** A cold APK build is five to eight minutes and a maker
+   builds rarely. If you add one, only successful builds may write its key: a cancelled run held a
+   `Swatinem/rust-cache` reservation that then refused every later save.
 6. **A copied template may not run on its first commit.** There is no repository-created event, so
    `workflow_dispatch` is the guaranteed first run. Say so first in the README.
-7. **Record the numbers.** Job wall time, cold versus warm cache, artifact size, and every failure and
-   fix go into `history.md`. Do not paraphrase a guess as a measurement.
+7. **Record the numbers.** Job wall time, per-step time, artifact size, and every failure and fix go
+   into `history.md`. Do not paraphrase a guess as a measurement, and never derive a step time by
+   subtracting from the job wall — read it from the log.
 
 ## Verification gates
 

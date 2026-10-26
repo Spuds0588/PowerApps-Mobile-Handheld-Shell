@@ -47,7 +47,8 @@ recorded in `history.md`. Anything that needs rugged hardware stays unchecked on
 ## Phase 5 — GitHub Actions
 
 - [x] `release.yml`: push to `main` + dispatch, JDK 17, pinned SDK platform/build-tools/NDK, pinned
-      Rust and Tauri CLI, Rust cache with a successful-builds-only key.
+      Rust and Tauri CLI. No dependency cache: a stale reservation made it unreliable, and a cold build
+      is five to eight minutes.
 - [x] A `Verify APK` step that fails the job on a bad signature or a missing library, receiver, or
       embedded config.
 - [x] First real run green (`40336020894`, commit `924bc3f`), logs read, artifact downloaded and
