@@ -124,6 +124,8 @@ is built yet.
       features on.
 - [ ] Builder checkboxes for the three permissions, written into the generated JSON; front-door
       "Honest limits" wording and config table; README permission notes and how to reset a denial.
+- [ ] `agents.md` gains one rule: a new device permission goes through the `native` block and
+      `native-inputs-plan.md`, so the next agent does not add one ad hoc.
 - [ ] CI: the Verify APK step asserts the built permission list matches the config, so a regression
       fails the build instead of shipping.
 - [ ] Emulator checks from the plan's acceptance matrix, with permission counts, sizes and runs
@@ -131,8 +133,8 @@ is built yet.
 
 ## Phase 10 — Camera scanner, v2 (planned)
 
-- [ ] ZXing decoder plus a `PlanarYUVLuminanceSource` adapter, unit-tested against static Code 128, QR
-      and Data Matrix frames.
+- [ ] CameraX and ZXing dependencies, then the decoder plus a `PlanarYUVLuminanceSource` adapter,
+      unit-tested against static Code 128, QR and Data Matrix frames.
 - [ ] CameraX preview overlay inside `MainActivity` (not a second activity, so the WebView and the
       page state survive), with torch, tap-to-focus, and Back closing the overlay first.
 - [ ] Delivery through the same `nativeOnScan` the DataWedge broadcast uses, so a camera scan fires
