@@ -42,8 +42,10 @@ never creates a version tag, and nothing is published unless it runs on `main`.
    ```
 
 5. Point the device's scan profile at the app. On Zebra, open **DataWedge**, choose the profile,
-   enable **Intent output**, set delivery to **Broadcast intent**, and set the intent action to the
-   same string as `scanner.intentAction` (`com.powerapps.handheld.SCAN` by default).
+   enable **Intent output**, set delivery to **Broadcast intent**, set the intent action to the same
+   string as `scanner.intentAction` (`com.powerapps.handheld.SCAN` by default), and turn
+   **Keystroke output** off. Typing is not affected; only the scan engine's key simulation is, which
+   is what causes held keys and stray characters.
 
 Each green build on `main` publishes the next patch version: `v1.0.0`, `v1.0.1`, `v1.0.2`, and so on,
 with the APK attached and a table of the `config.json` it was built from. The version is stamped into

@@ -645,7 +645,8 @@ footer .refs a { color: #7b8ca6; }
         <div class="step">
             <span class="n">2</span>
             <h3>Turn on intent output</h3>
-            <p>Enable <strong>Intent output</strong>, set delivery to <strong>Broadcast intent</strong>, and clear the category field.</p>
+            <p>Enable <strong>Intent output</strong>, set delivery to <strong>Broadcast intent</strong>, clear the
+                category field, and turn <strong>Keystroke output</strong> off.</p>
         </div>
         <div class="step">
             <span class="n">3</span>
@@ -658,8 +659,9 @@ footer .refs a { color: #7b8ca6; }
             If a device sends a different extra key, change <code>scanner.intentExtraKey</code> and rebuild:
             the receiver also falls back to the common <code>version_1_data</code> and <code>data</code>
             extras.</p>
-        <p>Keyboard-wedge mode is not used. Held keys, dropped characters and focus jumps are exactly what
-            a broadcast intent avoids.</p>
+        <p>Scans arrive as a broadcast, not as typed keys, so turn the scan engine's Keystroke output off.
+            Held keys, dropped characters and focus jumps come from that mode. Typing is untouched: the
+            on-screen keyboard and any attached keyboard work as usual.</p>
     </div>
 </section>
 

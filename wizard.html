@@ -212,8 +212,10 @@ footer { margin-top: 22px; font-size: 12px; color: var(--faint); }
                     <code>version_1_data</code>, so Honeywell and Datalogic usually work unchanged.</p>
             </div>
 
-            <p class="note"><strong>Keyboard-wedge mode is not used.</strong> The shell reads a broadcast intent,
-                which is why held keys, dropped characters and focus jumps do not happen.</p>
+            <p class="note"><strong>Scans arrive as a broadcast, not as typed keys.</strong> With Intent output on,
+                turn the scan engine's Keystroke output off: held keys, dropped characters and focus jumps are
+                what that mode causes. Typing is unaffected. The on-screen keyboard and any attached keyboard
+                work as usual.</p>
             <div class="error" id="err-2" role="status" aria-live="polite"></div>
         </section>
 
