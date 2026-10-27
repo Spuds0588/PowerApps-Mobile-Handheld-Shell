@@ -55,6 +55,20 @@ overlay closes first). No injection path produces the *gesture*, though:
 So the guest receives the touches and the system declines to commit them as a gesture; nothing in the
 shell is involved, and a real finger swipe stays on the hardware list.
 
+### Shipped
+
+| Run | What it did | Result |
+| --- | --- | --- |
+| `40513397286` push `eeb0af7` | production build from the shipped `config.json` | green, 5m36s; `Verify APK` passed; `Publish release` skipped on the template, as designed |
+| `40513464992` dispatch `config=demo` | demo profile | green, 8m21s; `demo-latest` re-published at **11,866,647 bytes**, sha256 `56845c2f…` |
+| `40513394984` push `eeb0af7` | Pages | green; `demo.html`, `index.html`, `wizard.html` and `README.md` all serve the commit's bytes, checked by hash |
+
+The released asset carries `queries → IMAGE_CAPTURE` and the six permissions. The flow was then re-run on
+**that** APK rather than the local debug build: the capture input raised the camera prompt (granted,
+*While using the app*), opened `com.android.camera2/com.android.camera.CaptureActivity`, and wrote
+**JPEG_20261027_084630_8829138225685468145.jpg**, 63,405 bytes, which the card rendered as
+`JPEG_2026…5468145.jpg`.
+
 ### What this leaves
 
 Photo capture and file upload are closed on this image. The microphone **signal** and the finger swipe
