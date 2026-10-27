@@ -24,6 +24,11 @@ dependencies, not from memory. The commands to re-check them are at the end.
 | `Launch()` to mail, tel, external sites | `mailto:`, `tel:`, off-allowlist https | [lib.rs](src-tauri/src/lib.rs) `on_navigation` returns false for any host outside `allowedDomains` (`lib.rs:134-144`), so these end as `[SECURITY][BLOCKED]`. | Deferred, see open decisions. |
 | Pen, signature, video playback, fullscreen | Canvas and `<video>` | Already works in a WebView; wry even implements fullscreen video. | Nothing. |
 
+Verified since: the `external-files-path` line is necessary but not sufficient. The app targets SDK 37
+and declared no `<queries>`, so `Intent.resolveActivity` could not see the camera app, wry's capture
+branch bailed out before the URI was ever built, and the input opened the picker. Both halves are in the
+manifest now, and the JPEG that came back through the provider is in `history.md`.
+
 ## What no wrapper can provide
 
 The native **Barcode reader control** cannot be served by this shell. Microsoft documents it as
@@ -204,14 +209,15 @@ v1 is about a day. v2 is about three more.
 - Microphone on: `RECORD_AUDIO` and `MODIFY_AUDIO_SETTINGS` present; the demo's level meter moves.
 - Location on: one dialog, then `adb emu geo fix -122.4194 37.7749` shows up in the readout.
 - Files: an upload from Downloads works with no permission; capture writes a JPEG through the provider.
+  Both observed on the phone image.
 - Install compatibility: `aapt dump badging` reports camera, microphone and GPS as not required.
   Confirmed on the released demo APK: `android.hardware.camera`, `.microphone`, `.location`,
   `.location.gps` and `.location.network` all report `uses-feature-not-required`.
 
-The only image on this host is an Android TV build: no DocumentsUI, a camera stub instead of a camera
-app, and no GPS provider (`cmd location providers add-test-provider` is refused for the shell uid). The
-upload, capture and location-readout checks therefore stay open; everything else in the list was
-observed and recorded in `history.md`.
+The phone image (API 36, `handheld-phone`) closed the upload, capture and location-readout checks that
+the Android TV image could not answer; everything above is observed and recorded in `history.md` except
+two items. The microphone **signal** is one: this emulator has no audio source, so the level meter cannot
+move. A real lens is the other, and that is what a printed code, the flash and the focus hunt need.
 
 ## Open decisions
 

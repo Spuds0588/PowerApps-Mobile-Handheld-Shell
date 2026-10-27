@@ -2,6 +2,64 @@
 
 Newest first. Every number here was measured on this machine or in a named GitHub Actions run.
 
+## 2026-10-27 — Phone image, second run: photo capture fixed, microphone and gesture Back measured
+
+**Status:** one source change. The demo asset already on the release (`30f8891a…`, 11,866,563 bytes,
+built from `64c5a97`) was reinstalled on the `handheld-phone` AVD and driven through the three checks the
+previous run left open. Photo capture failed for a reason neither the plan nor the earlier run named, so
+the manifest gained a `<queries>` element. The other two were measured rather than argued about.
+
+### Photo capture: Android package visibility, not the provider
+
+| Step | Result |
+| --- | --- |
+| Tap the capture input (`accept="image/*" capture="environment"`) | the **photo picker** opened (`GET_CONTENT`, `typ=image/*`) — the silent fallback the plan describes |
+| Ruled out first | the released APK's `file_paths.xml` does carry `external-files-path` (dumped from `res/8K.xml`), and `cmd package resolve-activity -a android.media.action.IMAGE_CAPTURE` resolves to `com.android.camera2/com.android.camera.CaptureActivity` |
+| Why nothing was logged | wry's `Logger.shouldLog()` is `BuildConfig.DEBUG`, so a release build prints no fallback warning at all |
+| Local debug build of the demo profile | `W Tauri/FileChooser: Media capture intent could not be launched. Falling back to default file picker.` — the capture branch **is** entered and `createImageFileUri()` did not throw, so `Intent.resolveActivity` returned null |
+| Cause | Android 11+ package visibility. The app targets SDK 37 and declared no `<queries>`, so the camera app is invisible to `resolveActivity` even though it is installed |
+| Fix | `<queries><intent><action android:name="android.media.action.IMAGE_CAPTURE"/></intent></queries>` in `app/src/main/AndroidManifest.xml`. No permission is involved, so it holds whatever the `native` flags say |
+| After the fix | the same tap opened the camera app; confirming wrote **JPEG_20261027_083015_2603937444471638876.jpg**, 63,650 bytes, to `…/files/Pictures`, and the page rendered it, with `JPEG_2026…1638876.jpg` on the card |
+
+`external-files-path` was still necessary — without it the same flow falls back one step later, inside
+`getUriForFile` — but it was never the whole fix.
+
+### Microphone
+
+| Check | Result |
+| --- | --- |
+| Prompt | **Allow PowerApps Shell Demo to record audio?**, answered *While using the app*; `RECORD_AUDIO: granted=true` |
+| Page | `open: microphone`, privacy chip visible |
+| Stream | Chromium built an input stream (`AudioStreamBuilder usage=2 inputPreset=5`) and `dumpsys media.audio_flinger` reports `Input thread … type 3 (RECORD): Standby: no` |
+| Signal | the level bar stayed at 0% in three sampled frames (row 703, uniform track colour), so the plan's “the level meter moves” is **not** reproduced on this image |
+
+This emulator has no audio **source**: `/tmp/emu.log` carries `Could not init 'pa' audio driver`, pulseaudio
+is not installed here, `-audio alsa` changes nothing, and the host's only capture device returns constant
+full-scale samples (2 s of `arecord`, peak 32768) rather than audio. The prompt, the gate and the live
+capture stream are the shell's half of the contract and are proven; sample content belongs to the device.
+The TV-image entry below records the level bar moving; that was not reproducible on the phone image and
+should be read as that image's result, not as a property of the shell.
+
+### Gesture Back
+
+The shield still answers the hardware key (`[SECURITY][BLOCKED]`, activity stays top, and the scanner
+overlay closes first). No injection path produces the *gesture*, though:
+
+| Attempt | Delivered? | Result |
+| --- | --- | --- |
+| `input swipe` right 8→420 px at 80, 150, 300 and 600 ms | no Back | shield silent at every duration |
+| `input motionevent DOWN/MOVE×7/UP`, 6→430 px | no Back | shield silent |
+| raw `/dev/input/event2` sweep 40→16000 units (≈1→350 px), 12 steps, tracking id and `BTN_TOUCH` | yes | the pointer overlay tracked `dX: 350.7`; the shield stayed silent |
+| the same raw sweep in Settings, as a control | yes | Settings opened **Connected devices** — the system read the drag as a tap |
+
+So the guest receives the touches and the system declines to commit them as a gesture; nothing in the
+shell is involved, and a real finger swipe stays on the hardware list.
+
+### What this leaves
+
+Photo capture and file upload are closed on this image. The microphone **signal** and the finger swipe
+need a real device, as does the lens: the physical print, a real flash unit and a real focus hunt.
+
 ## 2026-10-26 — Phone image: bars, screen, latency, memory, files, GPS and a camera decode
 
 **Status:** no source change. The APK workflow was re-checked on GitHub, then the released demo APK

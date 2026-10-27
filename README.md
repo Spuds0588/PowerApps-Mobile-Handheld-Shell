@@ -131,7 +131,11 @@ preview logs CameraX's answer rather than assuming it worked. Both are logged.
   never asks the page. This scanner is ours, and it writes into the control the operator last touched.
 
 Attachments and photo capture need no permission: file uploads use the system picker, and the capture
-flow uses the device's camera app. Both are available whatever the three flags say.
+flow uses the device's camera app. Both are available whatever the three flags say. Two manifest pieces
+have to stay for capture to work: the `IMAGE_CAPTURE` intent under `<queries>`, without which Android 11+
+hides the camera app from the shell and the input silently opens the picker instead, and
+`external-files-path` in `res/xml/file_paths.xml`, without which the JPEG the shell writes cannot be
+shared back to the page.
 
 Add every domain your app or its sign-in flow needs to `allowedDomains`. The shipped list is
 Microsoft's documented Power Apps set: `*.powerapps.com` (the play and content hosts),

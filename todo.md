@@ -106,9 +106,11 @@ the released demo APK. What remains needs a real scan engine, a real lens, or a 
       Both numbers exclude the DataWedge hop and a real device's memory; see `history.md`.
 - [x] Confirm the system bars stay hidden and Back stays suppressed on a phone-style navigation mode:
       gesture navigation (pill visible in Settings), a 720x1280 screenshot with no bars, `KEYCODE_BACK`
-      logged `[SECURITY][BLOCKED]` and the activity stayed top. An edge swipe injected with `input swipe`
-      is not delivered as Back on this emulator (Settings received it as a tap), so a real finger swipe
-      stays with the hardware list.
+      logged `[SECURITY][BLOCKED]` and the activity stayed top. No injection path produces the *gesture*
+      here: `input swipe` at four durations, `input motionevent DOWN/MOVE/UP` and raw `/dev/input`
+      touches all leave the shield silent. The last two are delivered — the pointer overlay tracked
+      350.7 px of travel and Settings opened a subscreen instead of going back — so the system reads
+      them as a tap. A real finger swipe stays with the hardware list.
 - [x] Keep-screen-on with the timeout at 15 s: `stay_on_while_plugged_in=0`, then Home + 25 s put the
       display to sleep, while the shell foreground stayed awake past 40 s. `dumpsys window` reports
       `fl=KEEP_SCREEN_ON`.
@@ -151,13 +153,21 @@ Design, evidence and open questions live in [native-inputs-plan.md](native-input
       `native-inputs-plan.md`, so the next agent does not add one ad hoc.
 - [x] CI: the Verify APK step asserts the built permission list matches the config, so a regression
       fails the build instead of shipping. Green for `INTERNET` alone and for the six.
-- [x] Every acceptance check the plan's matrix lists except photo capture below, with permission
-      counts, sizes and runs recorded in `history.md`.
+- [x] Every acceptance check the plan's matrix lists except the microphone signal below, with
+      permission counts, sizes and runs recorded in `history.md`.
 - [x] File upload end to end on the phone image: `Choose File` opened DocumentsUI, Downloads held the
       pushed file, and the card reported **upload.txt**, `0.0 KB, text/plain`.
-- [ ] Photo capture end to end (`<input type="file" accept="image/*" capture>`): the `external-files-path`
-      fix is in place, but the demo card has no capture input, so no JPEG has been seen coming back
-      through the provider.
+- [x] Photo capture end to end (`<input type="file" accept="image/*" capture>`): the demo's capture
+      input opened the camera app and its 63,650-byte JPEG came back through the provider, preview
+      included. `external-files-path` alone was not enough: Android 11+ package visibility hides the
+      camera app from `Intent.resolveActivity`, so the manifest now declares the `IMAGE_CAPTURE` intent
+      under `<queries>`. Found with a debug build, because wry logs the silent fallback only when
+      `BuildConfig.DEBUG` is on.
+- [ ] The plan's microphone signal check ("the level meter moves"): the prompt, the grant and
+      `open: microphone` are observed and Android reports a live `type 3 (RECORD)` input thread, but the
+      meter stayed flat at 0% across three sampled frames — this emulator has no audio source
+      (`Could not init 'pa' audio driver`, and `-audio alsa` is no better). Signal content stays with the
+      hardware list.
 - [x] The location **fix** in the demo readout on the phone image: the precise-setting prompt was
       answered **While using the app**, `adb emu geo fix -87.6298 41.8781` produced
       **41.87810, -87.62980 ±5 m**.

@@ -205,6 +205,7 @@ producing a working artifact. Therefore:
 | `index.html` | Serve locally, exercise the trigger button, check 1280 px and 390 px, no console errors, then check the live Pages URL |
 | `wizard.html` | Serve locally, walk all four steps, fail validation on purpose, parse the generated JSON, check 1280 px and 390 px |
 | `demo.html` | Serve locally, scan with **Simulate a scan**, confirm value, field and event trail update, then repeat in the demo APK |
+| File input capture | In the demo APK, tap **Choose File** on the capture input: the camera app must open and its JPEG must come back into the page. A photo picker means `<queries>` lost its `IMAGE_CAPTURE` intent; a plain file picker means `file_paths.xml` lost `external-files-path`. wry logs neither in a release build |
 | `gen/android` regeneration | Diff against git; the receiver, `MainActivity.kt`, signing config and `rootDirRel` must survive |
 
 The emulator is a convenience, not the acceptance test. A physical Zebra, Honeywell or Datalogic
