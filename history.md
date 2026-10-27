@@ -2,6 +2,78 @@
 
 Newest first. Every number here was measured on this machine or in a named GitHub Actions run.
 
+## 2026-10-26 — Phone image: bars, screen, latency, memory, files, GPS and a camera decode
+
+**Status:** no source change. The APK workflow was re-checked on GitHub, then the released demo APK
+(`30f8891a…`, 11,866,563 bytes) was installed on a new phone AVD and driven through every Phase 8 item
+that does not need a real scan engine, lens or tenant. Two Phase 9 checks the TV image could not answer
+now pass: file upload and the location **fix**.
+
+### The workflow, checked again
+
+| Run | What it did | Result |
+| --- | --- | --- |
+| `40416279904` push `64c5a97` | production build from the shipped `config.json` | green; `Verify APK` passed; `Publish release` and `Publish demo release` skipped, as designed for the template repository |
+| `40416295926` dispatch `config=demo` | demo profile | green; `Verify APK` passed on 11,866,563 bytes and the six permissions; `Published …/tag/demo-latest` |
+| `becd19f` push, docs only | `**.md`, `index.html`, `wizard.html` | no APK run at all; Pages deployed |
+
+`Publish release` is skipped on the template because its `config.json` is the placeholder. A copy
+releases normally; that path was exercised before the guard existed (`v1.0.0`, `v1.0.1`, both later
+removed) and nothing in it changed.
+
+### Setup
+
+- System image `system-images;android-36;google_apis;x86_64`, installed because the only image on this
+  host was Android TV, which is why Phase 9 had no DocumentsUI and no GPS provider.
+- AVD `handheld-phone`, written by hand from a minimal `config.ini` (720x1280, density 320,
+  `hw.camera.back = virtualscene`, `hw.camera.front = emulated`, `hw.gps = yes`), booted with KVM,
+  `-no-window`, `swiftshader_indirect`, `-camera-back virtualscene`, `-camera-front emulated`.
+- `adb install -r` of the release asset (SHA-256 `30f8891a…`) answered `Success`.
+  Boot logs: `[INIT] … 'PowerApps Shell Demo'`,
+  `[CONFIG] Native camera=true cameraScanner=true microphone=true location=true`, then
+  `[NAVIGATION][ALLOWED]` on the Pages demo page.
+
+### Observed
+
+| Check | Result |
+| --- | --- |
+| First launch, gesture navigation | Android's one-time **Viewing full screen** education sheet covered the kiosk; **Got it** dismissed it and it did not return |
+| Full screen | 720x1280 screenshots show no status or navigation bar; the navigation pill is visible in Settings, so gesture navigation is active |
+| Back | `KEYCODE_BACK` logged `[SECURITY][BLOCKED] Hardware Back suppressed.`; the activity stayed `topResumedActivity` and the page kept its state |
+| Edge swipe | three injected swipes (120, 400 and 800 ms) produced no Back callback and no page change; a control swipe on a Settings list was received as a tap, so `input swipe` cannot stand in for a finger gesture here |
+| Keep-screen-on | timeout 15 s, `stay_on_while_plugged_in=0`: Home + 25 s gave `mWakefulness=Asleep`; with the shell foreground it stayed `Awake` past 40 s; window `fl=KEEP_SCREEN_ON` |
+| Scan-to-DOM latency | receipt `19:20:25.531` → page `input` `19:20:25.532` (1 ms) → `barcodeScanned` `19:20:25.535` (4 ms) |
+| Memory | PSS 82,968 KB / RSS 165,496 KB after a session; 128,000 KB PSS / 267,844 KB RSS on a fresh launch. Above the 65 MB target on this emulator |
+| File upload | `Choose File` opened `com.google.android.documentsui/…PickActivity`; Downloads held the pushed file; the card showed **upload.txt**, `0.0 KB, text/plain` |
+| Location | the precise-setting prompt was answered **While using the app**; `adb emu geo fix -87.6298 41.8781` produced **41.87810, -87.62980 ±5 m** |
+| Camera preview (`getUserMedia`) | camera prompt, then `live: camera2 0, facing front` with the stream painted in the card |
+| Camera scanner | the QR poster decoded `DEMO-CAM-778812` into Item; **No flash** disabled the torch; three opens decoded three times, zero `FATAL EXCEPTION`, activity top |
+| Shell broadcast, no flag | still enqueued with 0 receivers with the app resumed; `--receiver-include-background` delivered, as recorded in the earlier playtest |
+| Background broadcast | with the app backgrounded, the flagged broadcast still reached the receiver and Item held the value when the app returned |
+
+### Findings
+
+1. **The first full-screen launch is a system sheet, not a kiosk bug.** Android shows "Viewing full
+   screen / To exit, swipe down from the top" once, the first time an app hides the bars. README now
+   tells the operator to tap **Got it**.
+2. **A camera scan raises the privacy chip, and the status bar with it, for a few seconds.** The green
+   camera chip sits in the status bar; it was gone by the next screenshot and the kiosk was edge-to-edge
+   again. Expect the same transient on hardware.
+3. **`input swipe` is not a Back gesture here.** The shell's Back callback is proven by `KEYCODE_BACK`,
+   and the control app received the injected swipe as a tap, so a real finger swipe stays on the
+   hardware list.
+4. **`stay_on_while_plugged_in` must be off before testing the screen timeout.** With the emulator's
+   default of 1, the display never slept and "keep screen on" would have proved nothing.
+5. **The memory target is not met on the emulator, and the emulator is not the verdict.** 83-128 MB PSS
+   is WebView plus an x86_64 image running ARM code; a 2 GB handheld has to be measured on the handheld.
+6. **The phone image closes the two Phase 9 gaps the TV image could not.** DocumentsUI and a GPS provider
+   are present; only photo capture remains, because the demo card has no `capture` input.
+7. **The poster recipe, exactly.** `poster.png` is the generated QR on this host; the working flat poster
+   is 1.6 world units at `0 0.30 -2.60`, `rotation 0 0 0`, in `Toren1BD.posters`. That file was restored
+   to its stock ten lines afterwards; `poster.png` is still the QR, the one emulator asset left changed.
+
+No source file changed; `config.json` still ships with all four `native` flags false.
+
 ## 2026-10-26 — Badging, the soft keyboard, and six stale claims
 
 **Status:** docs only, no code changed, no rebuild. Two open claims were measured on the released demo

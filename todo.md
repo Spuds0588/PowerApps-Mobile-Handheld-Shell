@@ -91,23 +91,40 @@ recorded in `history.md`. Anything that needs rugged hardware stays unchecked on
       focused field with the diagnostics panel confirming the string.
 - [x] Test releases `v1.0.0` and `v1.0.1` and their tags removed, demo release in their place.
 
-## Phase 8 — Needs a physical handheld (cannot be done on this host)
+## Phase 8 — Hardware and tenant checks
+
+The API 36 phone image (AVD `handheld-phone`) cleared the navigation, screen and measurement items on
+the released demo APK. What remains needs a real scan engine, a real lens, or a real tenant.
 
 - [ ] Sideload the release APK on a Zebra TC21/TC52 or Honeywell CT40/CT60 and confirm it boots.
 - [ ] Configure DataWedge Intent output (action, broadcast delivery, no category) and confirm a real
       trigger pull reaches `BarcodeReceiver` **without** the `am` background flag.
 - [ ] Confirm the value lands in a real Power Apps text input and that Power Apps does not clear it.
-- [ ] Measure scan-to-UI latency (target sub-50 ms) and RSS (target under 65 MB).
-- [ ] Confirm the system bars stay hidden and Back stays suppressed on a phone-style navigation mode.
-- [ ] Confirm keep-screen-on through a full shift with the screen timeout set low.
+- [x] Measure the shell's scan-to-UI latency and memory on the phone image: 1 ms from receipt to the
+      page's `input` event and 4 ms to `barcodeScanned`; PSS 82,968 KB / RSS 165,496 KB after a session,
+      and 128,000 / 267,844 KB on a fresh launch, so the 65 MB target is **not** met on this emulator.
+      Both numbers exclude the DataWedge hop and a real device's memory; see `history.md`.
+- [x] Confirm the system bars stay hidden and Back stays suppressed on a phone-style navigation mode:
+      gesture navigation (pill visible in Settings), a 720x1280 screenshot with no bars, `KEYCODE_BACK`
+      logged `[SECURITY][BLOCKED]` and the activity stayed top. An edge swipe injected with `input swipe`
+      is not delivered as Back on this emulator (Settings received it as a tap), so a real finger swipe
+      stays with the hardware list.
+- [x] Keep-screen-on with the timeout at 15 s: `stay_on_while_plugged_in=0`, then Home + 25 s put the
+      display to sleep, while the shell foreground stayed awake past 40 s. `dumpsys window` reports
+      `fl=KEEP_SCREEN_ON`.
+- [x] First full-screen launch: Android shows its one-time **Viewing full screen** education sheet over
+      the kiosk; **Got it** dismisses it and it does not return. `README.md` now says so.
 - [ ] Sign in with a real Entra ID tenant and add any extra domains it needs to `allowedDomains`.
 - [ ] Sideload the demo APK on a phone with no scan engine, decode a printed code with the camera, and
-      press torch and tap-to-focus against a real lens with real flash.
+      press torch and tap-to-focus against a real lens with real flash. The phone image proved the rest
+      on the released APK: a generated QR decoded `DEMO-CAM-778812` into Item, three opens decoded three
+      times with no crash, the torch read **No flash** and stayed disabled, and `getUserMedia` painted
+      `live: camera2 0, facing front`. The print, the lens and the flash remain.
 
 ## Phase 9 — Native inputs, v1 (delivered)
 
 Design, evidence and open questions live in [native-inputs-plan.md](native-inputs-plan.md). Delivered in
-#3 (`755e472`); the emulator run and the two checks this image could not answer are in `history.md`.
+#3 (`755e472`); the emulator runs and the checks only hardware can answer are in `history.md`.
 
 - [x] `native` block in the config schema (`camera`, `cameraScanner`, `microphone`, `location`), all
       `false` by default and `#[serde(default)]`, so every existing `config.json` still builds. Proven by
@@ -134,15 +151,16 @@ Design, evidence and open questions live in [native-inputs-plan.md](native-input
       `native-inputs-plan.md`, so the next agent does not add one ad hoc.
 - [x] CI: the Verify APK step asserts the built permission list matches the config, so a regression
       fails the build instead of shipping. Green for `INTERNET` alone and for the six.
-- [x] Every acceptance check the plan's matrix lists except the two below, with permission counts,
-      sizes and runs recorded in `history.md`.
-- [ ] Photo capture and file upload seen end to end. This system image has no DocumentsUI and only a TV
-      camera stub, so `<input type=file>` answers "You don't have an app that can do this". Needs a
-      phone or handheld image.
-- [ ] The location **fix** in the demo readout. `adb emu geo fix` is accepted and `dumpsys location`
-      shows the app's own `HIGH_ACCURACY` request, but this image registers no GPS provider and
-      `cmd location providers add-test-provider` is refused for the shell uid. Needs an image with a
-      working provider.
+- [x] Every acceptance check the plan's matrix lists except photo capture below, with permission
+      counts, sizes and runs recorded in `history.md`.
+- [x] File upload end to end on the phone image: `Choose File` opened DocumentsUI, Downloads held the
+      pushed file, and the card reported **upload.txt**, `0.0 KB, text/plain`.
+- [ ] Photo capture end to end (`<input type="file" accept="image/*" capture>`): the `external-files-path`
+      fix is in place, but the demo card has no capture input, so no JPEG has been seen coming back
+      through the provider.
+- [x] The location **fix** in the demo readout on the phone image: the precise-setting prompt was
+      answered **While using the app**, `adb emu geo fix -87.6298 41.8781` produced
+      **41.87810, -87.62980 ±5 m**.
 
 ## Phase 10 — Camera scanner, v2 (delivered)
 

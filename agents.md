@@ -84,9 +84,11 @@ export ANDROID_HOME="$HOME/android-dev/sdk"
 export NDK_HOME="$ANDROID_HOME/ndk/27.3.13750724"
 
 (cd src-tauri/gen/android && ./gradlew :app:testUniversalDebugUnitTest)   # decoder unit tests
-# Scan from the emulator camera: add flat posters to $ANDROID_HOME/emulator/resources/Toren1BD.posters
-# pointing at a QR in poster.png, boot with -no-snapshot -camera-back virtualscene, then tap Scan.
-# Recipe and numbers: history.md, "Camera scanner" entry.
+# Phone AVD: handheld-phone, API 36 google_apis x86_64, 720x1280, camera virtualscene + emulated front.
+# Boot: emulator -avd handheld-phone -no-window -no-audio -no-snapshot -camera-back virtualscene
+# Camera decode: with poster.png as the QR, append to $ANDROID_HOME/emulator/resources/Toren1BD.posters:
+#   poster scan-center / size 1.6 1.6 / position 0 0.30 -2.60 / rotation 0 0 0 / default poster.png
+# Then tap Scan; restore the posters file when done. Numbers: history.md, phone-image entry.
 cargo fmt --manifest-path src-tauri/Cargo.toml --check
 cargo check --manifest-path src-tauri/Cargo.toml --target aarch64-linux-android --lib
 python3 -m json.tool config.json
@@ -94,7 +96,7 @@ python3 -c "import yaml; yaml.safe_load(open('.github/workflows/release.yml'))"
 tauri android build --apk --target aarch64 --ci                     # one ABI, fast feedback
 tauri android build --apk --target aarch64 --target armv7 --ci      # what CI builds
 adb install -r src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
-adb shell am broadcast -a com.powerapps.handheld.SCAN \
+adb shell am broadcast -a com.powerapps.handheld.SCAN --receiver-include-background \
   --es com.symbol.datawedge.data_string "TEST-123"                  # fake a hardware scan
 python3 -m http.server 8899                                         # index.html, wizard.html, demo.html
 gh workflow run release.yml && gh run watch

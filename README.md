@@ -43,6 +43,9 @@ never creates a version tag, and nothing is published unless it runs on `main`.
    adb install -r app-universal-release.apk
    ```
 
+   The first launch shows Android's one-time **Viewing full screen** hint over the kiosk. Tap
+   **Got it**; it does not come back, and the system bars stay hidden from then on.
+
 5. Point the device's scan profile at the app. On Zebra, open **DataWedge**, choose the profile,
    enable **Intent output**, set delivery to **Broadcast intent**, set the intent action to the same
    string as `scanner.intentAction` (`com.powerapps.handheld.SCAN` by default), and turn
