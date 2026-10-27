@@ -385,6 +385,7 @@ pre.wrap-code code { white-space: pre-wrap; }
 .gap { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
 .gap h3 { font-size: 12.5px; margin-bottom: 5px; color: #cbd5e1; }
 .gap p { font-size: 12px; margin: 0; color: var(--faint); }
+.gaps .wide { grid-column: 1 / -1; }
 
 footer { margin-top: 52px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 12px; }
 footer p { margin-bottom: 5px; font-size: 12px; }
@@ -714,6 +715,16 @@ footer .refs a { color: #7b8ca6; }
         <div class="gap">
             <h3>Not multi-app</h3>
             <p>One Power App, one window, no tabs or split view. Copy the template again for a second app.</p>
+        </div>
+        <div class="gap wide">
+            <h3>Not yet run on a rugged handheld</h3>
+            <p>Every measurement in <code>history.md</code> comes from an emulator, because no Zebra,
+                Honeywell or Datalogic device was available while this was built. A real scan engine with
+                its DataWedge or Enterprise Scan configuration, a printed barcode through the camera, and
+                a live Power Apps tenant are designed rather than proven. If you have the hardware,
+                <a href="https://github.com/Spuds0588/PowerApps-Mobile-Handheld-Shell/issues">open an
+                    issue</a> with what you saw &mdash; <code>todo.md</code> lists exactly which checks are
+                waiting for one.</p>
         </div>
     </div>
 </section>

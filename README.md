@@ -183,6 +183,24 @@ Build rules, CI discipline and cleanup: [agents.md](agents.md).
 Decisions, PRD deviations and measured build/CI findings: [history.md](history.md).
 Remaining work: [todo.md](todo.md).
 
+## What is tested, and what is not
+
+Everything here is exercised on emulators, never on a rugged handheld — none was available while this
+was built. `history.md` records each measurement on the released demo APK: the kiosk behaviour on an API
+36 `handheld-phone` AVD, the scan path driven with `adb shell am broadcast`, the device permissions and
+their denials, file upload, photo capture, the location readout and the scanner overlay.
+
+Treat these as designed rather than proven until someone runs them on a device: a real Zebra, Honeywell
+or Datalogic scan engine with its DataWedge or Enterprise Scan configuration, a real trigger pull without
+the `am` background flag, a value landing in a live Power Apps control, a real Entra ID tenant sign-in, a
+printed barcode through the camera scanner, the torch and tap-to-focus against real hardware, and the
+microphone signal. `todo.md` marks each one.
+
+If you have the hardware, please open an
+[issue](https://github.com/Spuds0588/PowerApps-Mobile-Handheld-Shell/issues) with the device, its
+Android and scan-engine versions, what you ran and the logcat lines. A failure report is worth as much
+as a success, and it is the only way these checks close.
+
 ## License
 
 MIT

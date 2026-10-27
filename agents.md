@@ -210,7 +210,9 @@ producing a working artifact. Therefore:
 
 The emulator is a convenience, not the acceptance test. A physical Zebra, Honeywell or Datalogic
 device is still required for: real DataWedge broadcast behaviour, trigger latency, memory footprint,
-and screen-on during a shift.
+and screen-on during a shift. None was available when this was built, so never present an emulator run
+as proof of hardware behaviour, and never close a hardware item without a report from someone who ran it
+on a device — the repository's issue tracker is where those reports arrive.
 
 ## Cleanup after every task
 

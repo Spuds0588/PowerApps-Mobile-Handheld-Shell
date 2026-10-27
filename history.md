@@ -74,6 +74,11 @@ The released asset carries `queries → IMAGE_CAPTURE` and the six permissions. 
 Photo capture and file upload are closed on this image. The microphone **signal** and the finger swipe
 need a real device, as does the lens: the physical print, a real flash unit and a real focus hunt.
 
+No rugged handheld was available for any of this work, so every hardware item in `todo.md` is designed
+rather than proven. A report from someone who owns one — device and Android version, the scan engine's
+configuration, what was run and the logcat lines — is the only thing that closes them; the repository's
+issue tracker is where those reports land.
+
 ## 2026-10-26 — Phone image: bars, screen, latency, memory, files, GPS and a camera decode
 
 **Status:** no source change. The APK workflow was re-checked on GitHub, then the released demo APK

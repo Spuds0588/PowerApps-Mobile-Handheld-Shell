@@ -94,7 +94,11 @@ recorded in `history.md`. Anything that needs rugged hardware stays unchecked on
 ## Phase 8 — Hardware and tenant checks
 
 The API 36 phone image (AVD `handheld-phone`) cleared the navigation, screen and measurement items on
-the released demo APK. What remains needs a real scan engine, a real lens, or a real tenant.
+the released demo APK. What remains needs a real scan engine, a real lens, or a real tenant — and no
+handheld was available while this was built, so every unchecked item below is designed rather than
+proven. A report from someone who owns the device closes one: open an
+[issue](https://github.com/Spuds0588/PowerApps-Mobile-Handheld-Shell/issues) with the device and Android
+version, what was run, and the logcat lines.
 
 - [ ] Sideload the release APK on a Zebra TC21/TC52 or Honeywell CT40/CT60 and confirm it boots.
 - [ ] Configure DataWedge Intent output (action, broadcast delivery, no category) and confirm a real
