@@ -168,7 +168,8 @@ button.primary { background: linear-gradient(135deg, #2f6fed, #5964a6); border-c
 .cap h3 { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); margin-bottom: 6px; }
 .cap p { font-size: 12.5px; color: var(--muted); margin-top: 6px; overflow-wrap: anywhere; }
 .cap p b { color: var(--ink); }
-.cap video { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 7px; margin-top: 8px; background: #000; }
+.cap video, .cap img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 7px; margin-top: 8px; background: #000; }
+.cap img[hidden] { display: none; }
 .cap-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .meter { height: 6px; border-radius: 3px; background: rgba(255,255,255,.08); margin-top: 8px; overflow: hidden; }
 .meter i { display: block; height: 100%; width: 0; background: var(--green); }
@@ -253,6 +254,12 @@ button.primary { background: linear-gradient(135deg, #2f6fed, #5964a6); border-c
                     </div>
                     <div class="meter"><i id="mic-meter"></i></div>
                     <p id="mic-state">idle</p>
+                </div>
+                <div class="cap">
+                    <h3>Camera photo</h3>
+                    <input type="file" id="photo-pick" accept="image/*" capture="environment">
+                    <img id="photo-preview" alt="" hidden>
+                    <p id="photo-state">no photo taken</p>
                 </div>
                 <div class="cap">
                     <h3>File upload</h3>
@@ -476,6 +483,18 @@ button.primary { background: linear-gradient(135deg, #2f6fed, #5964a6); border-c
         document.getElementById("file-state").innerHTML = file
             ? "<b>" + file.name + "</b><br>" + (file.size / 1024).toFixed(1) + " KB, " + (file.type || "unknown type")
             : "no file chosen";
+    });
+
+    // The capture attribute sends this input straight to the camera app, whose JPEG
+    // comes back through the shell's FileProvider rather than DocumentsUI.
+    document.getElementById("photo-pick").addEventListener("change", function () {
+        var file = this.files && this.files[0];
+        var preview = document.getElementById("photo-preview");
+        if (!file) { preview.hidden = true; return; }
+        document.getElementById("photo-state").innerHTML = "<b>" + file.name + "</b><br>" +
+            (file.size / 1024).toFixed(1) + " KB, " + (file.type || "unknown type");
+        preview.src = URL.createObjectURL(file);
+        preview.hidden = false;
     });
 
     document.getElementById("geo-read").addEventListener("click", function () {
